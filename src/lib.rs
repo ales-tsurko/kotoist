@@ -19,11 +19,11 @@
 
 use std::sync::Once;
 
-use log::{error, info, trace, LevelFilter};
+use log::{info, LevelFilter};
 
-use vst::api::Supported;
+use vst::api::{Event, EventType, Events, MidiEvent, Supported, TimeInfoFlags};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin};
-use vst::plugin_main;
+use vst::{buffer::AudioBuffer, host::Host, plugin_main};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -34,6 +34,17 @@ struct Kotoist {
     sample_rate: f32,
     block_size: i64,
     is_playing: bool,
+    count: i64,
+}
+
+impl Kotoist {
+    fn update_play_state(&mut self) {
+        if let Some(time_info) = self.host.get_time_info(0) {
+            self.is_playing = TimeInfoFlags::from_bits(time_info.flags)
+                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
+                .unwrap_or(false);
+        }
+    }
 }
 
 impl Plugin for Kotoist {
@@ -55,16 +66,6 @@ impl Plugin for Kotoist {
 
     fn set_block_size(&mut self, size: i64) {
         self.block_size = size;
-    }
-
-    fn resume(&mut self) {
-        info!("hello");
-        self.is_playing = true;
-    }
-
-    fn suspend(&mut self) {
-        info!("suspend");
-        self.is_playing = false;
     }
 
     fn get_info(&self) -> Info {
@@ -96,6 +97,37 @@ impl Plugin for Kotoist {
             Other(_) => Maybe,
         }
     }
+
+    fn process(&mut self, _buffer: &mut AudioBuffer<'_, f32>) {
+        self.update_play_state();
+
+        if self.is_playing {
+            if (self.count % 50 == 0) {
+                let mut event = MidiEvent {
+                    event_type: EventType::Midi,
+                    byte_size: 8,
+                    delta_frames: 0,
+                    flags: 0,
+                    note_length: 2000,
+                    note_offset: 0,
+                    midi_data: [0x9c, 60, 100],
+                    _midi_reserved: 0,
+                    detune: 0,
+                    note_off_velocity: 0,
+                    _reserved1: 0,
+                    _reserved2: 0,
+                };
+                let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
+                let events = Events {
+                    num_events: 1,
+                    _reserved: 0,
+                    events: [conv, conv],
+                };
+                self.host.process_events(&events);
+            }
+            self.count += 1;
+        }
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -110,7 +142,7 @@ fn init_log() {
 #[cfg(windows)]
 fn _init_log(path: String) {
     use simple_logging;
-    simple_logging::log_to_file(path, LevelFilter::Trace).unwrap();
+    simple_logging::log_to_file(path, LevelFilter::Info).unwrap();
 }
 
 #[cfg(unix)]
@@ -124,7 +156,7 @@ fn _init_log(path: String) {
         .open(path)
         .unwrap();
     let config = ConfigBuilder::new().set_time_to_local(true).build();
-    let _ = WriteLogger::init(LevelFilter::Trace, config, file).unwrap();
+    let _ = WriteLogger::init(LevelFilter::Info, config, file).unwrap();
 }
 
 plugin_main!(Kotoist);
