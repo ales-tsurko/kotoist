@@ -8,6 +8,9 @@ edition = "2018"
 
 [dependencies]
 vst = "0.2"
+log = "0.4"
+simple-logging = "2.0"
+simplelog = "0.10"
 
 [lib]
 name = "kotoist"
