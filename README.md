@@ -9,7 +9,20 @@ programming language.
 
 ## Build
 
-[ref](https://github.com/RustAudio/vst-rs#packaging-on-os-x)
+Use `./build.sh win` on Windows or `./build.sh mac` on macOS.
+
+If you wish to build manually, you should build GUI first:
+
+```
+cd gui
+yarn build
+```
+
+Then you can build the plugin:
+
+```
+cargo build
+```
 
 On OS X VST plugins are packaged inside of loadable bundles. To package your VST
 as a loadable bundle you may use the osx_vst_bundler.sh script this library
@@ -21,3 +34,5 @@ Example:
 ./osx_vst_bundler.sh Plugin target/release/plugin.dylib
 Creates a Plugin.vst bundle
 ```
+
+[ref](https://github.com/RustAudio/vst-rs#packaging-on-os-x)
