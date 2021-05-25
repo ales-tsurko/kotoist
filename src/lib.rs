@@ -27,45 +27,8 @@ use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
-
-const HTML: &'static str = r#"
-    <!doctype html>
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title></title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style type="text/css">
-            body {
-                font-family: sans-serif;
-                padding-top: 10%;
-                text-align: center;
-            }
-        </style>
-    </head>
-        <body>
-            <label for="waveformRange">Sine — Square</label>
-            <br/>
-            <input id="waveformRange" type="range" min="0" max="1.0" value="0" step="0.01"/>
-            <br/>
-            <label for="frequencyRange">Frequency</label>
-            <br/>
-            <input id="frequencyRange" type="range" min="55" max="880" value="440" step="any"/>
-        </body>
-        <script>
-            var waveformRange = document.getElementById("waveformRange");
-            var frequencyRange = document.getElementById("frequencyRange");
-            waveformRange.value = external.invoke("getWaveform");
-            frequencyRange.value = external.invoke("getFrequency");
-            waveformRange.addEventListener("change", function(event) {
-                external.invoke("setWaveform " + event.target.value);
-            });
-            frequencyRange.addEventListener("change", function(event) {
-                external.invoke("setFrequency " + event.target.value);
-            });
-        </script>
-    </html>
-"#;
+const HTML: &'static str = include_str!("../gui/build/index.html");
+const EDITOR_SIZE: (i32, i32) = (640, 480);
 
 fn create_javascript_callback() -> vst_gui::JavascriptCallback {
     Box::new(move |message: String| {
@@ -203,7 +166,7 @@ impl Plugin for Kotoist {
         let gui = vst_gui::new_plugin_gui(
             String::from(HTML),
             create_javascript_callback(),
-            Some((480, 320)),
+            Some(EDITOR_SIZE),
         );
         Some(Box::new(gui))
     }
@@ -239,4 +202,5 @@ fn _init_log(path: String) {
     let _ = WriteLogger::init(LevelFilter::Info, config, file).unwrap();
 }
 
+#[allow(missing_docs)]
 plugin_main!(Kotoist);
