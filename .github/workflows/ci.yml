@@ -31,6 +31,7 @@ jobs:
       - name: Build GUI
         run: |
           cd gui
+          yarn
           yarn build
 
       - name: Build 
