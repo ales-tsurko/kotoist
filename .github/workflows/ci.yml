@@ -28,6 +28,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Build GUI
+        run: |
+          cd gui
+          yarn build
+
       - name: Build 
         run: cargo build
 
