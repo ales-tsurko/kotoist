@@ -3,12 +3,18 @@ import AceEditor from "react-ace";
 import { FaHammer, FaBroom } from "react-icons/fa";
 
 function App() {
-  const [code, setCode] = useState("// type your code...");
+  const [code, setCode] = useState("");
+  const [selection, setSelection] = useState("");
   const [consoleOut, setConsoleOut] = useState("console output");
 
   const onChange = (newValue) => {
-    console.log("onChange", newValue);
     setCode(newValue);
+  };
+
+  const onSelectionChange = (newValue) => {
+    const selectedText = newValue.doc.getTextRange(newValue.getRange());
+    setSelection(selectedText);
+    setConsoleOut(selectedText);
   };
 
   const onClearButtonClick = () => {
@@ -16,7 +22,8 @@ function App() {
   };
 
   const onBuildButtonClick = () => {
-    console.log("build");
+    const block = selection.length > 0 ? selection : code;
+    window.external.invoke("SEND_CODE " + block);
   };
 
   return (
@@ -26,7 +33,7 @@ function App() {
         width="100%"
         height="330px"
         onChange={onChange}
-        value={code}
+        onSelectionChange={onSelectionChange}
         focus={true}
         enableBasicAutocompletion={true}
         enableLiveAutocompletion={true}
@@ -54,11 +61,7 @@ function Toolbar(props) {
 
 function Console(props) {
   const text = props.text;
-  return (
-    <div contentEditable={true} className="console">
-      {text}
-    </div>
-  );
+  return <div className="console">{text}</div>;
 }
 
 export default App;

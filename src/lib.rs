@@ -17,7 +17,10 @@
     unreachable_pub
 )]
 
+mod editor;
+
 use std::sync::Once;
+use std::sync::{Arc, Mutex};
 
 use log::{info, LevelFilter};
 
@@ -25,41 +28,10 @@ use vst::api::{Event, EventType, Events, MidiEvent, Supported, TimeInfoFlags};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
+use editor::Editor as KotoistEditor;
+
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
-const HTML: &'static str = include_str!("../gui/build/index.html");
-const EDITOR_SIZE: (i32, i32) = (640, 480);
-
-fn create_javascript_callback() -> vst_gui::JavascriptCallback {
-    Box::new(move |message: String| {
-        let mut tokens = message.split_whitespace();
-
-        let command = tokens.next().unwrap_or("");
-        let argument = tokens.next().unwrap_or("").parse::<f32>();
-
-        match command {
-            "getWaveform" => {
-                return "Sine".to_string();
-            }
-            "getFrequency" => {
-                return "440.0".to_string();
-            }
-            "setWaveform" => {
-                if let Ok(arg) = argument {
-                    info!("{}", arg);
-                }
-            }
-            "setFrequency" => {
-                if let Ok(arg) = argument {
-                    info!("{}", arg);
-                }
-            }
-            _ => {}
-        }
-
-        String::new()
-    })
-}
 
 #[derive(Default)]
 struct Kotoist {
@@ -68,6 +40,7 @@ struct Kotoist {
     block_size: i64,
     is_playing: bool,
     count: i64,
+    editor: Arc<Mutex<KotoistEditor>>,
 }
 
 impl Kotoist {
@@ -141,7 +114,7 @@ impl Plugin for Kotoist {
                     byte_size: 8,
                     delta_frames: 0,
                     flags: 0,
-                    note_length: 10000,
+                    note_length: 1000,
                     note_offset: 0,
                     midi_data: [0x9c, 60, 100],
                     _midi_reserved: 0,
@@ -163,15 +136,9 @@ impl Plugin for Kotoist {
     }
 
     fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-        let gui = vst_gui::new_plugin_gui(
-            String::from(HTML),
-            create_javascript_callback(),
-            Some(EDITOR_SIZE),
-        );
-        Some(Box::new(gui))
+        Some(KotoistEditor::default().into_handle())
     }
 }
-
 
 #[cfg(debug_assertions)]
 fn init_log() {
