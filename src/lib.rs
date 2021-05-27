@@ -18,17 +18,18 @@
 )]
 
 mod editor;
+mod parameters;
 
-use std::sync::Once;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Once};
 
 use log::{info, LevelFilter};
 
 use vst::api::{Event, EventType, Events, MidiEvent, Supported, TimeInfoFlags};
-use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin};
+use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
+use parameters::Parameters;
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -40,7 +41,7 @@ struct Kotoist {
     block_size: i64,
     is_playing: bool,
     count: i64,
-    editor: Arc<Mutex<KotoistEditor>>,
+    parameters: Arc<Parameters>,
 }
 
 impl Kotoist {
@@ -80,6 +81,8 @@ impl Plugin for Kotoist {
             vendor: "Ales Tsurko".to_string(),
             unique_id: 4269,
             category: Category::Generator,
+            // preset_chunks: true,
+            parameters: 1,
             ..Default::default()
         }
     }
@@ -136,7 +139,13 @@ impl Plugin for Kotoist {
     }
 
     fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-        Some(KotoistEditor::default().into_handler())
+        Some(KotoistEditor::new(Arc::clone(&self.parameters)).into_handler())
+    }
+
+    fn get_parameter_object(&mut self) -> Arc<dyn PluginParameters> {
+        let result = Arc::clone(&self.parameters);
+        let result: Arc<dyn PluginParameters> = result;
+        result
     }
 }
 
