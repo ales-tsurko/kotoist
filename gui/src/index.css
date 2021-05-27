@@ -43,4 +43,5 @@ body {
   height: 120px;
   font-family: monospace;
   overflow: auto;
+  white-space: pre-line;
 }

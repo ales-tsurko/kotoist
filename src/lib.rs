@@ -28,7 +28,7 @@ use vst::api::{Event, EventType, Events, MidiEvent, Supported, TimeInfoFlags};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
-use editor::Editor as KotoistEditor;
+use editor::KotoistEditor;
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -136,7 +136,7 @@ impl Plugin for Kotoist {
     }
 
     fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-        Some(KotoistEditor::default().into_handle())
+        Some(KotoistEditor::default().into_handler())
     }
 }
 

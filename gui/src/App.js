@@ -23,7 +23,8 @@ function App() {
 
   const onBuildButtonClick = () => {
     const block = selection.length > 0 ? selection : code;
-    window.external.invoke("SEND_CODE " + block);
+    const result = window.external.invoke("SEND_CODE " + block);
+    setConsoleOut(result);
   };
 
   return (
@@ -60,8 +61,7 @@ function Toolbar(props) {
 }
 
 function Console(props) {
-  const text = props.text;
-  return <div className="console">{text}</div>;
+  return <div className="console">{props.text}</div>;
 }
 
 export default App;

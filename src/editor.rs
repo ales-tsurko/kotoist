@@ -4,17 +4,17 @@ use vst_gui::PluginGui;
 const HTML: &'static str = include_str!("../gui/build/index.html");
 const EDITOR_SIZE: (i32, i32) = (640, 480);
 
-pub(crate) struct Editor {
+pub(crate) struct KotoistEditor {
     gui: PluginGui,
 }
 
-impl Editor {
-    pub(crate) fn into_handle(self) -> Box<PluginGui> {
+impl KotoistEditor {
+    pub(crate) fn into_handler(self) -> Box<PluginGui> {
         Box::new(self.gui)
     }
 }
 
-impl Default for Editor {
+impl Default for KotoistEditor {
     fn default() -> Self {
         Self {
             gui: vst_gui::new_plugin_gui(
@@ -42,7 +42,7 @@ impl Dispatcher {
     fn on_send_code(message: String) -> String {
         let command_str: String = Command::SendCode.into();
         info!("{}", &message[command_str.len() + 1..]);
-        String::new()
+        "This is sent from Rust\nAnd this is another line from Rust for testing.".to_string()
     }
 }
 
