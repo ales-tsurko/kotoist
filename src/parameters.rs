@@ -1,7 +1,5 @@
 use std::sync::RwLock;
 
-use log::info;
-
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 
@@ -39,7 +37,6 @@ impl Parameters {
 
 impl PluginParameters for Parameters {
     fn get_preset_data(&self) -> Vec<u8> {
-        info!("getting data");
         self.code.read().unwrap().as_bytes().into()
     }
 
@@ -48,10 +45,8 @@ impl PluginParameters for Parameters {
     }
 
     fn load_preset_data(&self, data: &[u8]) {
-        info!("loading state");
         let value = String::from_utf8(data.into()).unwrap();
         *self.code.write().unwrap() = value.clone();
-        info!("{}", value)
     }
 
     fn load_bank_data(&self, data: &[u8]) {

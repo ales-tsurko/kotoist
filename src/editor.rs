@@ -12,7 +12,6 @@ const EDITOR_SIZE: (i32, i32) = (640, 480);
 
 pub(crate) struct KotoistEditor {
     gui: PluginGui,
-    parameters: Arc<Parameters>,
 }
 
 impl KotoistEditor {
@@ -20,10 +19,9 @@ impl KotoistEditor {
         Self {
             gui: vst_gui::new_plugin_gui(
                 String::from(HTML),
-                make_dispatcher(Arc::clone(&parameters)),
+                make_dispatcher(parameters),
                 Some(EDITOR_SIZE),
             ),
-            parameters,
         }
     }
 }
@@ -104,7 +102,6 @@ fn on_eval_code(message: String, parameters: &Arc<Parameters>) -> String {
 fn on_send_console_out(message: String, parameters: &Arc<Parameters>) -> String {
     let command_str = Command::SendConsoleOut.to_string();
     let out = &message[command_str.len() + 1..];
-    info!("console: {}", out);
     parameters.set_console_out(out);
     String::new()
 }
