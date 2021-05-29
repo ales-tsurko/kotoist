@@ -1,6 +1,8 @@
+use std::string::ToString;
 use std::sync::Arc;
 
 use log::info;
+use vst::editor::{Editor, KeyCode, KnobMode};
 use vst_gui::{JavascriptCallback, PluginGui};
 
 use crate::parameters::Parameters;
@@ -10,6 +12,7 @@ const EDITOR_SIZE: (i32, i32) = (640, 480);
 
 pub(crate) struct KotoistEditor {
     gui: PluginGui,
+    parameters: Arc<Parameters>,
 }
 
 impl KotoistEditor {
@@ -17,14 +20,49 @@ impl KotoistEditor {
         Self {
             gui: vst_gui::new_plugin_gui(
                 String::from(HTML),
-                make_dispatcher(parameters),
+                make_dispatcher(Arc::clone(&parameters)),
                 Some(EDITOR_SIZE),
             ),
+            parameters,
         }
     }
+}
 
-    pub(crate) fn into_handler(self) -> Box<PluginGui> {
-        Box::new(self.gui)
+impl Editor for KotoistEditor {
+    fn size(&self) -> (i32, i32) {
+        self.gui.size()
+    }
+
+    fn position(&self) -> (i32, i32) {
+        self.gui.position()
+    }
+
+    fn open(&mut self, parent: *mut std::ffi::c_void) -> bool {
+        self.gui.open(parent)
+    }
+
+    fn is_open(&mut self) -> bool {
+        self.gui.is_open()
+    }
+
+    fn idle(&mut self) {
+        self.gui.idle();
+    }
+
+    fn close(&mut self) {
+        self.gui.close();
+    }
+
+    fn set_knob_mode(&mut self, mode: KnobMode) -> bool {
+        self.gui.set_knob_mode(mode)
+    }
+
+    fn key_up(&mut self, keycode: KeyCode) -> bool {
+        self.gui.key_up(keycode)
+    }
+
+    fn key_down(&mut self, keycode: KeyCode) -> bool {
+        self.gui.key_down(keycode)
     }
 }
 
@@ -35,20 +73,53 @@ fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback {
 
         match command {
             Command::SendCode => on_send_code(message, &parameters),
+            Command::GetCode => on_get_code(&parameters),
+            Command::EvalCode => on_eval_code(message, &parameters),
+            Command::SendConsoleOut => on_send_console_out(message, &parameters),
+            Command::GetConsoleOut => on_get_console_out(&parameters),
             Command::Unknown => String::new(),
         }
     })
 }
 
 fn on_send_code(message: String, parameters: &Arc<Parameters>) -> String {
-    let command_str: String = Command::SendCode.into();
-    *parameters.code.lock().unwrap() = message[command_str.len() + 1..].into();
+    let command_str = Command::SendCode.to_string();
+    let code = &message[command_str.len() + 1..];
+    parameters.set_code(code);
+    String::new()
+}
+
+fn on_get_code(parameters: &Arc<Parameters>) -> String {
+    parameters.code()
+}
+
+fn on_eval_code(message: String, parameters: &Arc<Parameters>) -> String {
+    let command_str = Command::EvalCode.to_string();
+    let code = &message[command_str.len() + 1..];
+    parameters.set_code(code);
 
     "This is sent from Rust\nAnd this is another line from Rust for testing.".to_string()
 }
 
+fn on_send_console_out(message: String, parameters: &Arc<Parameters>) -> String {
+    let command_str = Command::SendConsoleOut.to_string();
+    let out = &message[command_str.len() + 1..];
+    info!("console: {}", out);
+    parameters.set_console_out(out);
+    String::new()
+}
+
+fn on_get_console_out(parameters: &Arc<Parameters>) -> String {
+    parameters.console_out()
+}
+
+#[derive(Debug)]
 enum Command {
     SendCode,
+    GetCode,
+    EvalCode,
+    SendConsoleOut,
+    GetConsoleOut,
     Unknown,
 }
 
@@ -56,15 +127,23 @@ impl From<&str> for Command {
     fn from(message_str: &str) -> Self {
         match message_str {
             "SEND_CODE" => Self::SendCode,
+            "GET_CODE" => Self::GetCode,
+            "EVAL_CODE" => Self::EvalCode,
+            "SEND_CONSOLE_OUT" => Self::SendConsoleOut,
+            "GET_CONSOLE_OUT" => Self::GetConsoleOut,
             _ => Self::Unknown,
         }
     }
 }
 
-impl Into<String> for Command {
-    fn into(self) -> String {
+impl ToString for Command {
+    fn to_string(&self) -> String {
         match self {
             Self::SendCode => "SEND_CODE".to_string(),
+            Self::GetCode => "GET_CODE".to_string(),
+            Self::EvalCode => "EVAL_CODE".to_string(),
+            Self::SendConsoleOut => "SEND_CONSOLE_OUT".to_string(),
+            Self::GetConsoleOut => "GET_CONSOLE_OUT".to_string(),
             Self::Unknown => String::new(),
         }
     }

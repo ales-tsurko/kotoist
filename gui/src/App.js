@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AceEditor from "react-ace";
 import { FaHammer, FaBroom } from "react-icons/fa";
 
@@ -6,15 +6,26 @@ function App() {
   const [code, setCode] = useState("");
   const [selection, setSelection] = useState("");
   const [consoleOut, setConsoleOut] = useState("console output");
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (didMountRef.current) {
+      window.external.invoke("SEND_CONSOLE_OUT " + consoleOut);
+    } else {
+      didMountRef.current = true;
+      setCode(window.external.invoke("GET_CODE"));
+      setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
+    }
+  }, [consoleOut]);
 
   const onChange = (newValue) => {
     setCode(newValue);
+    window.external.invoke("SEND_CODE " + newValue);
   };
 
   const onSelectionChange = (newValue) => {
     const selectedText = newValue.doc.getTextRange(newValue.getRange());
     setSelection(selectedText);
-    setConsoleOut(selectedText);
   };
 
   const onClearButtonClick = () => {
@@ -23,7 +34,7 @@ function App() {
 
   const onBuildButtonClick = () => {
     const block = selection.length > 0 ? selection : code;
-    const result = window.external.invoke("SEND_CODE " + block);
+    const result = window.external.invoke("EVAL_CODE " + block);
     setConsoleOut(result);
   };
 
@@ -34,6 +45,7 @@ function App() {
         width="100%"
         height="330px"
         onChange={onChange}
+        value={code}
         onSelectionChange={onSelectionChange}
         focus={true}
         enableBasicAutocompletion={true}

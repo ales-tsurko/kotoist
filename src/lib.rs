@@ -56,8 +56,12 @@ impl Kotoist {
 
 impl Plugin for Kotoist {
     fn new(host: HostCallback) -> Self {
+        let mut parameters = Parameters::default();
+        parameters.set_host(host.clone());
+
         Self {
             host,
+            parameters: Arc::new(parameters),
             ..Default::default()
         }
     }
@@ -79,9 +83,9 @@ impl Plugin for Kotoist {
         Info {
             name: "Kotoist".to_string(),
             vendor: "Ales Tsurko".to_string(),
-            unique_id: 4269,
+            unique_id: 27052021,
             category: Category::Generator,
-            // preset_chunks: true,
+            preset_chunks: true,
             parameters: 1,
             ..Default::default()
         }
@@ -92,18 +96,17 @@ impl Plugin for Kotoist {
         use Supported::*;
 
         match can_do {
-            SendEvents => Yes,
-            SendMidiEvent => Yes,
-            ReceiveEvents => Yes,
-            ReceiveMidiEvent => Yes,
-            ReceiveTimeInfo => Yes,
-            Offline => Maybe,
-            MidiProgramNames => Yes,
-            Bypass => Yes,
-            ReceiveSysExEvent => Yes,
-            MidiSingleNoteTuningChange => Yes,
-            MidiKeyBasedInstrumentControl => Yes,
-            Other(_) => Maybe,
+            SendEvents
+            | SendMidiEvent
+            | ReceiveEvents
+            | ReceiveMidiEvent
+            | ReceiveTimeInfo
+            | MidiProgramNames
+            | Bypass
+            | ReceiveSysExEvent
+            | MidiSingleNoteTuningChange
+            | MidiKeyBasedInstrumentControl => Yes,
+            _ => Maybe,
         }
     }
 
@@ -139,7 +142,7 @@ impl Plugin for Kotoist {
     }
 
     fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-        Some(KotoistEditor::new(Arc::clone(&self.parameters)).into_handler())
+        Some(Box::new(KotoistEditor::new(Arc::clone(&self.parameters))))
     }
 
     fn get_parameter_object(&mut self) -> Arc<dyn PluginParameters> {
