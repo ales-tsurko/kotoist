@@ -86,7 +86,6 @@ impl Plugin for Kotoist {
             unique_id: 27052021,
             category: Category::Generator,
             preset_chunks: true,
-            parameters: 1,
             ..Default::default()
         }
     }

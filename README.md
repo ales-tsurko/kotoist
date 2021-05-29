@@ -36,3 +36,11 @@ Creates a Plugin.vst bundle
 ```
 
 [ref](https://github.com/RustAudio/vst-rs#packaging-on-os-x)
+
+
+
+
+## REAPER Specific
+
+To make the plugin work as expected, you should right-click on the plugin in the
+FX Rack and choose "Send all keyboard input to plugin".
