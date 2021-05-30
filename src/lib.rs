@@ -141,7 +141,7 @@ impl Plugin for Kotoist {
     }
 
     fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-        Some(Box::new(KotoistEditor::new(Arc::clone(&self.parameters))))
+        Some(Box::new(KotoistEditor::new(&mut self.parameters)))
     }
 
     fn get_parameter_object(&mut self) -> Arc<dyn PluginParameters> {

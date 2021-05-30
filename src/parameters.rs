@@ -1,18 +1,29 @@
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
+use vst_gui::PluginGui;
 
 #[derive(Default)]
 pub(crate) struct Parameters {
     code: RwLock<String>,
     console_out: RwLock<String>,
     host: Option<HostCallback>,
+    gui: Option<Gui>,
 }
+
+struct Gui(Arc<RwLock<PluginGui>>);
+
+unsafe impl Send for Gui {}
+unsafe impl Sync for Gui {}
 
 impl Parameters {
     pub(crate) fn set_host(&mut self, host: HostCallback) {
         self.host = Some(host);
+    }
+
+    pub(crate) fn set_gui(&mut self, gui: Arc<RwLock<PluginGui>>) {
+        self.gui = Some(Gui(gui));
     }
 
     pub(crate) fn set_code(&self, code: &str) {
