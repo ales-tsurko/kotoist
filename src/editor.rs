@@ -93,9 +93,8 @@ fn on_get_code(parameters: &Arc<Parameters>) -> String {
 fn on_eval_code(message: String, parameters: &Arc<Parameters>) -> String {
     let command_str = Command::EvalCode.to_string();
     let code = &message[command_str.len() + 1..];
-    parameters.set_code(code);
-
-    "This is sent from Rust\nAnd this is another line from Rust for testing.".to_string()
+    parameters.eval_code(code);
+    String::new()
 }
 
 fn on_send_console_out(message: String, parameters: &Arc<Parameters>) -> String {
@@ -110,7 +109,7 @@ fn on_get_console_out(parameters: &Arc<Parameters>) -> String {
 }
 
 #[derive(Debug)]
-enum Command {
+pub(crate) enum Command {
     SendCode,
     GetCode,
     EvalCode,

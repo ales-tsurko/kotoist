@@ -1,8 +1,13 @@
+use std::fmt::format;
 use std::sync::{Arc, RwLock};
 
+use koto::{runtime::Value, Koto};
+use log::info;
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 use vst_gui::PluginGui;
+
+use crate::editor::Command;
 
 #[derive(Default)]
 pub(crate) struct Parameters {
@@ -10,6 +15,7 @@ pub(crate) struct Parameters {
     console_out: RwLock<String>,
     host: Option<HostCallback>,
     gui: RwLock<Option<Gui>>,
+    koto: RwLock<Koto>,
 }
 
 impl Parameters {
@@ -38,6 +44,39 @@ impl Parameters {
 
     pub(crate) fn console_out(&self) -> String {
         (*self.console_out.read().unwrap()).clone()
+    }
+
+    pub(crate) fn eval_code(&self, code: &str) {
+        if let Some(ref gui) = *self.gui.read().unwrap() {
+            let mut koto = self.koto.write().unwrap();
+            match koto.compile(code) {
+                Ok(_) => match koto.run() {
+                    Ok(result) => self.append_console(&format!("{}\n", result)),
+                    Err(runtime_error) => info!("Runtime error: {}", runtime_error),
+                },
+                Err(compiler_error) => info!("Compiler error: {}", compiler_error),
+            }
+        }
+    }
+
+    fn append_console(&self, out: &str) {
+        let mut console_out = self.console_out.write().unwrap();
+        console_out.push_str(out);
+
+        if let Some(ref gui) = *self.gui.read().unwrap() {
+            let event = format!(
+                r#"
+                (function() {{
+                    const event = new CustomEvent("{}", {{detail: "{}"}});
+                    window.dispatchEvent(event);
+                }})()
+                "#,
+                Command::SendConsoleOut.to_string(),
+                console_out.escape_default().to_string(),
+            );
+
+            gui.0.read().unwrap().execute(&event).unwrap(); // send response to console
+        }
     }
 }
 

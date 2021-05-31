@@ -12,11 +12,14 @@ function App() {
 
   useEffect(() => {
     if (didMountRef.current) {
-      window.external.invoke("SEND_CONSOLE_OUT " + consoleOut);
+      // window.external.invoke("SEND_CONSOLE_OUT " + consoleOut);
     } else {
       didMountRef.current = true;
       setCode(window.external.invoke("GET_CODE"));
       setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
+      window.addEventListener("SEND_CONSOLE_OUT", (e) =>
+        setConsoleOut(e.detail)
+      );
     }
   }, [consoleOut]);
 
@@ -32,12 +35,13 @@ function App() {
 
   const onClearButtonClick = () => {
     setConsoleOut("");
+    window.external.invoke("SEND_CONSOLE_OUT ");
   };
 
   const onBuildButtonClick = () => {
     const block = selection.length > 0 ? selection : code;
-    const result = window.external.invoke("EVAL_CODE " + block);
-    setConsoleOut(result);
+    window.external.invoke("EVAL_CODE " + block);
+    // setConsoleOut(result);
   };
 
   return (
