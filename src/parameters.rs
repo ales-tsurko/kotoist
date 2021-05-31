@@ -9,21 +9,16 @@ pub(crate) struct Parameters {
     code: RwLock<String>,
     console_out: RwLock<String>,
     host: Option<HostCallback>,
-    gui: Option<Gui>,
+    gui: RwLock<Option<Gui>>,
 }
-
-struct Gui(Arc<RwLock<PluginGui>>);
-
-unsafe impl Send for Gui {}
-unsafe impl Sync for Gui {}
 
 impl Parameters {
     pub(crate) fn set_host(&mut self, host: HostCallback) {
         self.host = Some(host);
     }
 
-    pub(crate) fn set_gui(&mut self, gui: Arc<RwLock<PluginGui>>) {
-        self.gui = Some(Gui(gui));
+    pub(crate) fn set_gui(&self, gui: Arc<RwLock<PluginGui>>) {
+        *self.gui.write().unwrap() = Some(Gui(gui));
     }
 
     pub(crate) fn set_code(&self, code: &str) {
@@ -64,3 +59,8 @@ impl PluginParameters for Parameters {
         self.load_preset_data(data);
     }
 }
+
+struct Gui(Arc<RwLock<PluginGui>>);
+
+unsafe impl Send for Gui {}
+unsafe impl Sync for Gui {}

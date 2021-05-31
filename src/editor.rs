@@ -14,7 +14,7 @@ pub(crate) struct KotoistEditor {
 }
 
 impl KotoistEditor {
-    pub(crate) fn new(parameters: &mut Arc<Parameters>) -> Self {
+    pub(crate) fn new(parameters: Arc<Parameters>) -> Self {
         let gui = Arc::new(RwLock::new(vst_gui::new_plugin_gui(
             String::from(HTML),
             make_dispatcher(Arc::clone(&parameters)),
