@@ -1,21 +1,21 @@
-use std::fmt::format;
 use std::sync::{Arc, RwLock};
 
-use koto::{runtime::Value, Koto};
+use koto::runtime::ValueMap;
+use koto::{Koto, KotoSettings};
 use log::info;
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 use vst_gui::PluginGui;
 
-use crate::editor::Command;
+use crate::command::Command;
 
-#[derive(Default)]
+// #[derive(Default)]
 pub(crate) struct Parameters {
     code: RwLock<String>,
     console_out: RwLock<String>,
     host: Option<HostCallback>,
     gui: RwLock<Option<Gui>>,
-    koto: RwLock<Koto>,
+    pub(crate) koto: RwLock<Koto>,
 }
 
 impl Parameters {
@@ -30,7 +30,7 @@ impl Parameters {
     pub(crate) fn set_code(&self, code: &str) {
         if let Some(host) = self.host {
             *self.code.write().unwrap() = code.to_string();
-            host.update_display(); // notify host that the plugin changed a parameter
+            host.update_display(); // notify host that the plugin is changing a parameter
         }
     }
 
@@ -47,15 +47,13 @@ impl Parameters {
     }
 
     pub(crate) fn eval_code(&self, code: &str) {
-        if let Some(ref gui) = *self.gui.read().unwrap() {
-            let mut koto = self.koto.write().unwrap();
-            match koto.compile(code) {
-                Ok(_) => match koto.run() {
-                    Ok(result) => self.append_console(&format!("{}\n", result)),
-                    Err(runtime_error) => info!("Runtime error: {}", runtime_error),
-                },
-                Err(compiler_error) => info!("Compiler error: {}", compiler_error),
-            }
+        let mut koto = self.koto.write().unwrap();
+        match koto.compile(code) {
+            Ok(_) => match koto.run() {
+                Ok(result) => self.append_console(&format!("{}\n", result)),
+                Err(err) => self.append_console(&format!("Runtime error: {}", err)),
+            },
+            Err(err) => self.append_console(&format!("Compiler error: {}", err)),
         }
     }
 
@@ -64,18 +62,30 @@ impl Parameters {
         console_out.push_str(out);
 
         if let Some(ref gui) = *self.gui.read().unwrap() {
-            let event = format!(
-                r#"
-                (function() {{
-                    const event = new CustomEvent("{}", {{detail: "{}"}});
-                    window.dispatchEvent(event);
-                }})()
-                "#,
-                Command::SendConsoleOut.to_string(),
-                console_out.escape_default().to_string(),
-            );
+            // send response to console
+            gui.0
+                .read()
+                .unwrap()
+                .execute(&Command::SendConsoleOut.to_js_event(&console_out))
+                .unwrap();
+        }
+    }
+}
 
-            gui.0.read().unwrap().execute(&event).unwrap(); // send response to console
+impl Default for Parameters {
+    fn default() -> Self {
+        let koto = Koto::with_settings(KotoSettings {
+            repl_mode: true,
+            ..Default::default()
+        });
+
+        // ..Default::default() calls it recursively, so we call it for each field separatelly
+        Self {
+            koto: RwLock::new(koto),
+            code: Default::default(),
+            console_out: Default::default(),
+            host: Default::default(),
+            gui: Default::default(),
         }
     }
 }

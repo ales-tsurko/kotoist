@@ -17,8 +17,10 @@
     unreachable_pub
 )]
 
+mod command;
 mod editor;
 mod parameters;
+mod pattern;
 
 use std::sync::{Arc, Once};
 
@@ -30,6 +32,7 @@ use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
 use parameters::Parameters;
+use pattern::make_module;
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -58,10 +61,17 @@ impl Plugin for Kotoist {
     fn new(host: HostCallback) -> Self {
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
+        let parameters = Arc::new(parameters);
+        parameters
+            .koto
+            .write()
+            .unwrap()
+            .prelude()
+            .add_map("pattern", make_module(Arc::clone(&parameters)));
 
         Self {
             host,
-            parameters: Arc::new(parameters),
+            parameters: Arc::clone(&parameters),
             ..Default::default()
         }
     }

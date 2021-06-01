@@ -1,10 +1,10 @@
-use std::string::ToString;
 use std::sync::{Arc, RwLock};
 
 use vst::editor::{Editor, KeyCode, KnobMode};
 use vst_gui::{JavascriptCallback, PluginGui};
 
 use crate::parameters::Parameters;
+use crate::command::Command;
 
 const HTML: &'static str = include_str!("../gui/build/index.html");
 const EDITOR_SIZE: (i32, i32) = (640, 480);
@@ -108,38 +108,3 @@ fn on_get_console_out(parameters: &Arc<Parameters>) -> String {
     parameters.console_out()
 }
 
-#[derive(Debug)]
-pub(crate) enum Command {
-    SendCode,
-    GetCode,
-    EvalCode,
-    SendConsoleOut,
-    GetConsoleOut,
-    Unknown,
-}
-
-impl From<&str> for Command {
-    fn from(message_str: &str) -> Self {
-        match message_str {
-            "SEND_CODE" => Self::SendCode,
-            "GET_CODE" => Self::GetCode,
-            "EVAL_CODE" => Self::EvalCode,
-            "SEND_CONSOLE_OUT" => Self::SendConsoleOut,
-            "GET_CONSOLE_OUT" => Self::GetConsoleOut,
-            _ => Self::Unknown,
-        }
-    }
-}
-
-impl ToString for Command {
-    fn to_string(&self) -> String {
-        match self {
-            Self::SendCode => "SEND_CODE".to_string(),
-            Self::GetCode => "GET_CODE".to_string(),
-            Self::EvalCode => "EVAL_CODE".to_string(),
-            Self::SendConsoleOut => "SEND_CONSOLE_OUT".to_string(),
-            Self::GetConsoleOut => "GET_CONSOLE_OUT".to_string(),
-            Self::Unknown => String::new(),
-        }
-    }
-}
