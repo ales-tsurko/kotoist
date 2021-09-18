@@ -8,6 +8,7 @@ use vst::plugin::{HostCallback, PluginParameters};
 use vst_gui::PluginGui;
 
 use crate::editor::command::Command;
+use crate::pattern::{make_module, Pattern};
 
 // #[derive(Default)]
 pub(crate) struct Parameters {
@@ -15,7 +16,8 @@ pub(crate) struct Parameters {
     console_out: RwLock<String>,
     host: Option<HostCallback>,
     gui: RwLock<Option<Gui>>,
-    pub(crate) koto: RwLock<Koto>,
+    koto: RwLock<Koto>,
+    pub(crate) pattern: Arc<Pattern>,
 }
 
 impl Parameters {
@@ -78,6 +80,9 @@ impl Default for Parameters {
             repl_mode: true,
             ..Default::default()
         });
+        let pattern = Arc::new(Pattern::default());
+        koto.prelude()
+            .add_map("pattern", make_module(Arc::clone(&pattern)));
 
         // ..Default::default() calls it recursively, so we call it for each field separatelly
         Self {
@@ -85,6 +90,7 @@ impl Default for Parameters {
             code: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
+            pattern: Arc::clone(&pattern),
             gui: Default::default(),
         }
     }

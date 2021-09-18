@@ -60,17 +60,10 @@ impl Plugin for Kotoist {
     fn new(host: HostCallback) -> Self {
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
-        let parameters = Arc::new(parameters);
-        parameters
-            .koto
-            .write()
-            .unwrap()
-            .prelude()
-            .add_map("pattern", make_module(Arc::clone(&parameters)));
 
         Self {
             host,
-            parameters: Arc::clone(&parameters),
+            parameters: Arc::new(parameters),
             ..Default::default()
         }
     }

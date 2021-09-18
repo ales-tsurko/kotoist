@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use koto::runtime::{runtime_error, Value, ValueMap};
 
-use crate::parameters::Parameters;
+#[derive(Debug, Default)]
+pub(crate) struct Pattern;
 
-pub(crate) fn make_module(params: Arc<Parameters>) -> ValueMap {
+pub(crate) fn make_module(pattern: Arc<Pattern>) -> ValueMap {
     use Value::{Iterator, Number, Str};
 
     let mut result = ValueMap::new();
