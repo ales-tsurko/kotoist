@@ -17,7 +17,6 @@
     unreachable_pub
 )]
 
-mod command;
 mod editor;
 mod parameters;
 mod pattern;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import AceEditor from "react-ace";
 import { FaHammer, FaBroom } from "react-icons/fa";
-import "ace-builds/src-noconflict/mode-javascript";
-import "ace-builds/src-noconflict/snippets/javascript";
+import "ace-builds/src-noconflict/mode-python";
+import "ace-builds/src-noconflict/snippets/python";
 
 function App() {
   const [code, setCode] = useState("");

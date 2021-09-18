@@ -1,10 +1,12 @@
+pub(crate) mod command;
+
 use std::sync::{Arc, RwLock};
 
 use vst::editor::{Editor, KeyCode, KnobMode};
-use vst_gui::{JavascriptCallback, PluginGui};
+use vst_gui::PluginGui;
 
 use crate::parameters::Parameters;
-use crate::command::Command;
+use self::command::make_dispatcher;
 
 const HTML: &'static str = include_str!("../gui/build/index.html");
 const EDITOR_SIZE: (i32, i32) = (640, 480);
@@ -62,49 +64,3 @@ impl Editor for KotoistEditor {
         self.gui.write().unwrap().key_down(keycode)
     }
 }
-
-fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback {
-    Box::new(move |message: String| -> String {
-        let command_str = message.split_whitespace().next().unwrap_or("");
-        let command = Command::from(command_str);
-
-        match command {
-            Command::SendCode => on_send_code(message, &parameters),
-            Command::GetCode => on_get_code(&parameters),
-            Command::EvalCode => on_eval_code(message, &parameters),
-            Command::SendConsoleOut => on_send_console_out(message, &parameters),
-            Command::GetConsoleOut => on_get_console_out(&parameters),
-            Command::Unknown => String::new(),
-        }
-    })
-}
-
-fn on_send_code(message: String, parameters: &Arc<Parameters>) -> String {
-    let command_str = Command::SendCode.to_string();
-    let code = &message[command_str.len() + 1..];
-    parameters.set_code(code);
-    String::new()
-}
-
-fn on_get_code(parameters: &Arc<Parameters>) -> String {
-    parameters.code()
-}
-
-fn on_eval_code(message: String, parameters: &Arc<Parameters>) -> String {
-    let command_str = Command::EvalCode.to_string();
-    let code = &message[command_str.len() + 1..];
-    parameters.eval_code(code);
-    String::new()
-}
-
-fn on_send_console_out(message: String, parameters: &Arc<Parameters>) -> String {
-    let command_str = Command::SendConsoleOut.to_string();
-    let out = &message[command_str.len() + 1..];
-    parameters.set_console_out(out);
-    String::new()
-}
-
-fn on_get_console_out(parameters: &Arc<Parameters>) -> String {
-    parameters.console_out()
-}
-

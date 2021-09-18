@@ -7,7 +7,7 @@ use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 use vst_gui::PluginGui;
 
-use crate::command::Command;
+use crate::editor::command::Command;
 
 // #[derive(Default)]
 pub(crate) struct Parameters {
