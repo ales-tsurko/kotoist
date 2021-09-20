@@ -7,10 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-koto = "0.7"
+koto = "0.8"
 log = "0.4"
 simple-logging = "2.0"
 simplelog = "0.10"
+thiserror = "1.0"
 vst = "0.2"
 vst-gui = { git = "https://github.com/mikesoylu/rust-vst-gui.git" }
 
