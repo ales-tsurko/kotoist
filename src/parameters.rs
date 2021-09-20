@@ -8,16 +8,13 @@ use vst::plugin::{HostCallback, PluginParameters};
 use vst_gui::PluginGui;
 
 use crate::editor::command::Command;
-use crate::pattern::{make_module, Pattern};
 
-// #[derive(Default)]
 pub(crate) struct Parameters {
     code: RwLock<String>,
     console_out: RwLock<String>,
     host: Option<HostCallback>,
     gui: RwLock<Option<Gui>>,
-    koto: RwLock<Koto>,
-    pub(crate) pattern: Arc<Pattern>,
+    pub(crate) koto: RwLock<Koto>,
 }
 
 impl Parameters {
@@ -59,7 +56,7 @@ impl Parameters {
         }
     }
 
-    fn append_console(&self, out: &str) {
+    pub(crate) fn append_console(&self, out: &str) {
         let mut console_out = self.console_out.write().unwrap();
         console_out.push_str(out);
 
@@ -74,15 +71,13 @@ impl Parameters {
     }
 }
 
+
 impl Default for Parameters {
     fn default() -> Self {
         let koto = Koto::with_settings(KotoSettings {
             repl_mode: true,
             ..Default::default()
         });
-        let pattern = Arc::new(Pattern::default());
-        koto.prelude()
-            .add_map("pattern", make_module(Arc::clone(&pattern)));
 
         // ..Default::default() calls it recursively, so we call it for each field separatelly
         Self {
@@ -90,7 +85,6 @@ impl Default for Parameters {
             code: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
-            pattern: Arc::clone(&pattern),
             gui: Default::default(),
         }
     }

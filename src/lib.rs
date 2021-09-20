@@ -31,7 +31,7 @@ use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
 use parameters::Parameters;
-use pattern::make_module;
+use pattern::{make_module, Scheduler};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -60,10 +60,18 @@ impl Plugin for Kotoist {
     fn new(host: HostCallback) -> Self {
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
+        let parameters = Arc::new(parameters);
+        let scheduler = Arc::new(Scheduler::new(host.clone(), Arc::clone(&parameters)));
+        parameters
+            .koto
+            .write()
+            .unwrap()
+            .prelude()
+            .add_map("pattern", make_module(Arc::clone(&scheduler)));
 
         Self {
             host,
-            parameters: Arc::new(parameters),
+            parameters,
             ..Default::default()
         }
     }
