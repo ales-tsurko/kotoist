@@ -119,7 +119,6 @@ impl Pattern {
     }
 
     fn events_from_koto(&mut self, value: &Value) -> Result<Vec<Event>, PatternError> {
-        //TODO what about rests?
         match value {
             Value::Map(koto_event) => Ok(vec![self.event_from_koto(koto_event)?]),
             Value::Iterator(iterator) => Ok(self
@@ -146,7 +145,15 @@ impl Pattern {
 
     fn event_from_map(&self, map: HashMap<&str, &Value>) -> Result<Event, PatternError> {
         let mut event = HashMap::new();
+        let mut is_rest = false;
         for (key, value) in map.iter() {
+            if *key == "note" {
+                if self.is_rest(value)? {
+                    is_rest = true;
+                    continue;
+                }
+            }
+
             let value = match value {
                 Value::Number(num) => match num {
                     ValueNumber::F64(val) => *val,
@@ -154,19 +161,36 @@ impl Pattern {
                 },
                 _ => return Err(PatternError::TypeError),
             };
-
             event.insert(*key, value);
         }
 
-        Ok(Event {
-            e_type: EventType::Note(
+        let e_type = if is_rest {
+            EventType::Rest
+        } else {
+            EventType::Note(
                 event["note"] as u8,
                 event["velocity"] as u8,
                 event["channel"] as u8,
-            ),
+            )
+        };
+
+        Ok(Event {
+            e_type,
             dur: event["dur"],
             length: event["length"],
         })
+    }
+
+    fn is_rest(&self, value: &Value) -> Result<bool, PatternError> {
+        if let Value::Str(val) = value {
+            if val.as_str() == "rest" {
+                return Ok(true);
+            }
+
+            return Err(PatternError::TypeError);
+        }
+
+        Ok(false)
     }
 
     fn post_error(&self, error: PatternError) {
@@ -193,7 +217,7 @@ pub(crate) struct Event {
 #[derive(Debug)]
 pub(crate) enum EventType {
     Note(u8, u8, u8), // note number, velocity, channel number
-    Pause,
+    Rest,
 }
 
 #[derive(Debug, Error)]
