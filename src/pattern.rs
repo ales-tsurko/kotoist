@@ -1,10 +1,12 @@
 use std::collections::hash_map::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use koto::runtime::{
     runtime_error, Value, ValueIterator, ValueIteratorOutput, ValueList, ValueMap, ValueNumber,
 };
 use thiserror::Error;
+use vst::api::TimeInfoFlags;
+use vst::host::Host;
 use vst::plugin::HostCallback;
 
 use crate::parameters::Parameters;
@@ -38,7 +40,8 @@ pub(crate) fn make_module(scheduler: Arc<Scheduler>) -> ValueMap {
 pub(crate) struct Scheduler {
     host: HostCallback,
     parameters: Arc<Parameters>,
-    queue: Vec<Pattern>,
+    queued_pattern: RwLock<Option<ScheduledPattern>>,
+    pattern: RwLock<Option<ScheduledPattern>>,
 }
 
 impl Scheduler {
@@ -46,24 +49,55 @@ impl Scheduler {
         Self {
             host,
             parameters,
-            queue: Vec::new(),
+            ..Default::default()
         }
     }
 
     fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
-        todo!()
+        let position = self.current_beat_position();
+        let offset = quant - (position % quant);
+        let position = offset + position;
+        *self.queued_pattern.write().unwrap() = Some(ScheduledPattern { position, pattern });
+    }
+
+    fn current_beat_position(&self) -> f64 {
+        let time_info = self
+            .host
+            .get_time_info(TimeInfoFlags::TEMPO_VALID.bits())
+            .unwrap();
+        let beats_per_sec = time_info.tempo / 60.0;
+        let beat_length = time_info.sample_rate / beats_per_sec;
+        time_info.sample_pos / beat_length
     }
 
     // TODO return ScheduledEvent instead (i.e. contains start_time and end_time instead of dur +
     // length)?
     // We push note on and note off into different streams. Then we check next values in those
     // streams independently.
-    fn process() -> Option<Vec<Event>> {
-        todo!()
+    fn process(&mut self) -> Option<Vec<Event>> {
+        let position = self.current_beat_position();
+        if let Some(pattern) = self.queued_pattern.get_mut().unwrap().take() {
+            if pattern.position >= position {
+                *self.pattern.write().unwrap() = Some(pattern);
+            }
+        }
+
+        if let Some(pattern) = self.pattern.get_mut().unwrap() {
+            let events = pattern.pattern.next();
+            // TODO schedule events
+            todo!();
+        }
+        
+        None
     }
 }
 
-pub(crate) struct Pattern {
+struct ScheduledPattern {
+    position: f64,
+    pattern: Pattern,
+}
+
+struct Pattern {
     iterator: ValueIterator,
     parameters: Arc<Parameters>,
 }
