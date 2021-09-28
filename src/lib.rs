@@ -21,17 +21,17 @@ mod editor;
 mod parameters;
 mod pattern;
 
-use std::sync::{Arc, Once};
+use std::sync::{Arc, Mutex, Once};
 
 use log::{info, LevelFilter};
 
-use vst::api::{Event, EventType, Events, MidiEvent, Supported, TimeInfoFlags};
+use vst::api::{Event, EventType, Events, MidiEvent, MidiEventFlags, Supported};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
 use parameters::Parameters;
-use pattern::{make_module, Scheduler};
+use pattern::{make_module, ScheduledEvent, Scheduler};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -41,19 +41,9 @@ struct Kotoist {
     host: HostCallback,
     sample_rate: f32,
     block_size: i64,
-    is_playing: bool,
     count: i64,
     parameters: Arc<Parameters>,
-}
-
-impl Kotoist {
-    fn update_play_state(&mut self) {
-        if let Some(time_info) = self.host.get_time_info(0) {
-            self.is_playing = TimeInfoFlags::from_bits(time_info.flags)
-                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
-                .unwrap_or(false);
-        }
-    }
+    scheduler: Arc<Mutex<Scheduler>>,
 }
 
 impl Plugin for Kotoist {
@@ -61,7 +51,10 @@ impl Plugin for Kotoist {
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
         let parameters = Arc::new(parameters);
-        let scheduler = Arc::new(Scheduler::new(host.clone(), Arc::clone(&parameters)));
+        let scheduler = Arc::new(Mutex::new(Scheduler::new(
+            host.clone(),
+            Arc::clone(&parameters),
+        )));
         parameters
             .koto
             .write()
@@ -72,6 +65,7 @@ impl Plugin for Kotoist {
         Self {
             host,
             parameters,
+            scheduler,
             ..Default::default()
         }
     }
@@ -120,24 +114,10 @@ impl Plugin for Kotoist {
     }
 
     fn process(&mut self, _buffer: &mut AudioBuffer<'_, f32>) {
-        self.update_play_state();
+        let events = self.scheduler.lock().unwrap().process();
 
-        if self.is_playing {
-            if self.count % 50 == 0 {
-                let mut event = MidiEvent {
-                    event_type: EventType::Midi,
-                    byte_size: 8,
-                    delta_frames: 0,
-                    flags: 0,
-                    note_length: 1000,
-                    note_offset: 0,
-                    midi_data: [0x9c, 60, 100],
-                    _midi_reserved: 0,
-                    detune: 0,
-                    note_off_velocity: 0,
-                    _reserved1: 0,
-                    _reserved2: 0,
-                };
+        for event in events {
+            if let Some(mut event) = event.into_vst_midi(self.block_size as i32) {
                 let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
                 let events = Events {
                     num_events: 1,
@@ -146,7 +126,6 @@ impl Plugin for Kotoist {
                 };
                 self.host.process_events(&events);
             }
-            self.count += 1;
         }
     }
 
