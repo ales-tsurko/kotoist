@@ -5,14 +5,15 @@ use std::sync::{Arc, RwLock};
 use vst::editor::{Editor, KeyCode, KnobMode};
 use vst_gui::PluginGui;
 
+use self::command::{make_dispatcher, Command};
 use crate::parameters::Parameters;
-use self::command::make_dispatcher;
 
 const HTML: &'static str = include_str!("../gui/build/index.html");
 const EDITOR_SIZE: (i32, i32) = (640, 480);
 
 pub(crate) struct KotoistEditor {
     gui: Arc<RwLock<PluginGui>>,
+    parameters: Arc<Parameters>,
 }
 
 impl KotoistEditor {
@@ -22,8 +23,8 @@ impl KotoistEditor {
             make_dispatcher(Arc::clone(&parameters)),
             Some(EDITOR_SIZE),
         )));
-        parameters.set_gui(Arc::clone(&gui));
-        Self { gui }
+
+        Self { gui, parameters }
     }
 }
 
@@ -45,7 +46,16 @@ impl Editor for KotoistEditor {
     }
 
     fn idle(&mut self) {
-        self.gui.write().unwrap().idle();
+        let mut gui = self.gui.write().unwrap();
+
+        gui.idle();
+
+        if *self.parameters.is_console_changed.read().unwrap() {
+            let console_out = self.parameters.console_out.read().unwrap();
+            gui.execute(&Command::SendConsoleOut.to_js_event(&console_out))
+                .unwrap();
+            *self.parameters.is_console_changed.write().unwrap() = false;
+        }
     }
 
     fn close(&mut self) {

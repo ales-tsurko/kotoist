@@ -56,16 +56,6 @@ impl Scheduler {
         }
     }
 
-    fn is_playing(&mut self) -> bool {
-        if let Some(time_info) = self.host.get_time_info(0) {
-            return TimeInfoFlags::from_bits(time_info.flags)
-                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
-                .unwrap_or(false);
-        }
-
-        false
-    }
-
     fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
         let (position, _) = self.position();
         let offset = quant - (position % quant);
@@ -105,6 +95,16 @@ impl Scheduler {
         let mut note_offs = self.note_offs_at(position);
         result.append(&mut note_offs);
         result
+    }
+
+    fn is_playing(&mut self) -> bool {
+        if let Some(time_info) = self.host.get_time_info(0) {
+            return TimeInfoFlags::from_bits(time_info.flags)
+                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
+                .unwrap_or(false);
+        }
+
+        false
     }
 
     /// check if the queued pattern should play
@@ -301,7 +301,7 @@ impl Pattern {
     }
 
     fn post_error(&self, error: PatternError) {
-        self.parameters.append_console(&format!("{}", error));
+        self.parameters.append_console(&format!("{}\n", error));
     }
 }
 

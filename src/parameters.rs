@@ -1,29 +1,20 @@
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
-use koto::runtime::ValueMap;
 use koto::{Koto, KotoSettings};
-use log::info;
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
-use vst_gui::PluginGui;
-
-use crate::editor::command::Command;
 
 pub(crate) struct Parameters {
     code: RwLock<String>,
-    console_out: RwLock<String>,
+    pub(crate) console_out: RwLock<String>,
     host: Option<HostCallback>,
-    gui: RwLock<Option<Gui>>,
+    pub(crate) is_console_changed: RwLock<bool>,
     pub(crate) koto: RwLock<Koto>,
 }
 
 impl Parameters {
     pub(crate) fn set_host(&mut self, host: HostCallback) {
         self.host = Some(host);
-    }
-
-    pub(crate) fn set_gui(&self, gui: Arc<RwLock<PluginGui>>) {
-        *self.gui.write().unwrap() = Some(Gui(gui));
     }
 
     pub(crate) fn set_code(&self, code: &str) {
@@ -59,18 +50,9 @@ impl Parameters {
     pub(crate) fn append_console(&self, out: &str) {
         let mut console_out = self.console_out.write().unwrap();
         console_out.push_str(out);
-
-        if let Some(ref gui) = *self.gui.read().unwrap() {
-            // send response to console
-            gui.0
-                .read()
-                .unwrap()
-                .execute(&Command::SendConsoleOut.to_js_event(&console_out))
-                .unwrap();
-        }
+        *self.is_console_changed.write().unwrap() = true;
     }
 }
-
 
 impl Default for Parameters {
     fn default() -> Self {
@@ -82,10 +64,10 @@ impl Default for Parameters {
         // ..Default::default() calls it recursively, so we call it for each field separatelly
         Self {
             koto: RwLock::new(koto),
+            is_console_changed: Default::default(),
             code: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
-            gui: Default::default(),
         }
     }
 }
@@ -108,8 +90,3 @@ impl PluginParameters for Parameters {
         self.load_preset_data(data);
     }
 }
-
-struct Gui(Arc<RwLock<PluginGui>>);
-
-unsafe impl Send for Gui {}
-unsafe impl Sync for Gui {}
