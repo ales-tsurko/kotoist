@@ -85,9 +85,8 @@ impl Scheduler {
 
         if let Some(pattern) = self.pattern.get_mut().unwrap() {
             if position >= self.wait_until {
-                if let Some(events) = pattern.pattern.next() {
-                    let mut sched_events = self.process_events(position, sample_pos, &events);
-                    result.append(&mut sched_events);
+                if let Some(event) = pattern.pattern.next() {
+                    result.push(self.process_events(position, sample_pos, event));
                 }
             }
         }
@@ -119,47 +118,36 @@ impl Scheduler {
         }
     }
 
-    fn process_events(
-        &mut self,
-        position: f64,
-        sample_pos: f64,
-        events: &[Event],
-    ) -> Vec<ScheduledEvent> {
-        if !events.is_empty() {
-            return vec![];
+    fn process_events(&mut self, beat_pos: f64, sample_pos: f64, event: Event) -> ScheduledEvent {
+        self.wait_until = beat_pos + event.dur;
+
+        self.append_note_off(event.clone(), beat_pos, sample_pos);
+
+        ScheduledEvent {
+            beat_pos,
+            sample_pos: sample_pos as i32,
+            event,
         }
-
-        self.wait_until = position + events[0].dur;
-
-        self.append_note_offs(&events, position, sample_pos);
-
-        events
-            .iter()
-            .map(|e| ScheduledEvent::On(position, sample_pos as i32, *e))
-            .collect()
     }
 
-    fn append_note_offs(&mut self, events: &[Event], position: f64, sample_pos: f64) {
-        let note_off_pos = position + events[0].length;
-
-        let mut note_offs: Vec<ScheduledEvent> = events
-            .iter()
-            .map(|e| ScheduledEvent::Off(note_off_pos, sample_pos as i32, *e))
-            .collect();
-
-        self.note_offs.append(&mut note_offs);
+    fn append_note_off(&mut self, mut event: Event, beat_pos: f64, sample_pos: f64) {
+        let note_off_pos = beat_pos + event.length;
+        event.state = EventState::Off;
+        self.note_offs.push(ScheduledEvent {
+            beat_pos,
+            sample_pos: sample_pos as i32,
+            event,
+        });
     }
 
     fn note_offs_at(&mut self, position: f64) -> Vec<ScheduledEvent> {
         // return (and remove from the list) note offs which valid for current position
-        let (result, sched): (Vec<ScheduledEvent>, Vec<ScheduledEvent>) =
-            self.note_offs.iter().partition(|e| {
-                if let ScheduledEvent::Off(p, _, _) = e {
-                    *p >= position
-                } else {
-                    false
-                }
-            });
+        let (result, sched): (Vec<ScheduledEvent>, Vec<ScheduledEvent>) = self
+            .note_offs
+            .iter()
+            .cloned()
+            .partition(|e| e.beat_pos >= position)
+            .to_owned();
         self.note_offs = sched;
         return result;
     }
@@ -183,11 +171,17 @@ impl Pattern {
         }
     }
 
-    fn next_in_iterator(&mut self, iterator: &mut ValueIterator) -> Option<Vec<Event>> {
+    fn next_in_iterator(&mut self, iterator: &mut ValueIterator) -> Option<Event> {
         if let Some(value) = iterator.next() {
             match value {
                 ValueIteratorOutput::Value(val) => match val {
-                    Value::List(list) => return self.handle_koto_list(list),
+                    Value::Map(koto_event) => match self.event_from_koto(&koto_event) {
+                        Ok(event) => return Some(event),
+                        Err(e) => self.post_error(e),
+                    },
+                    Value::Iterator(iterator) => {
+                        return self.next_in_iterator(&mut iterator.clone());
+                    }
                     Value::Empty => return None,
                     _ => self.post_error(PatternError::TypeError),
                 },
@@ -199,40 +193,6 @@ impl Pattern {
         }
 
         None
-    }
-
-    fn handle_koto_list(&mut self, list: ValueList) -> Option<Vec<Event>> {
-        match self.collect_events(list) {
-            Ok(events) => {
-                if events.is_empty() {
-                    None
-                } else {
-                    Some(events)
-                }
-            }
-            Err(err) => {
-                self.post_error(err);
-                None
-            }
-        }
-    }
-
-    fn collect_events(&mut self, list: ValueList) -> Result<Vec<Event>, PatternError> {
-        let mut result = Vec::new();
-        for value in list.data().iter() {
-            result.append(&mut self.events_from_koto(value)?);
-        }
-        Ok(result)
-    }
-
-    fn events_from_koto(&mut self, value: &Value) -> Result<Vec<Event>, PatternError> {
-        match value {
-            Value::Map(koto_event) => Ok(vec![self.event_from_koto(koto_event)?]),
-            Value::Iterator(iterator) => Ok(self
-                .next_in_iterator(&mut iterator.clone())
-                .unwrap_or_default()),
-            _ => Err(PatternError::TypeError),
-        }
     }
 
     fn event_from_koto(&mut self, koto_event: &ValueMap) -> Result<Event, PatternError> {
@@ -252,13 +212,9 @@ impl Pattern {
 
     fn event_from_map(&self, map: HashMap<&str, &Value>) -> Result<Event, PatternError> {
         let mut event = HashMap::new();
-        let mut is_rest = false;
         for (key, value) in map.iter() {
             if *key == "note" {
-                if self.is_rest(value)? {
-                    is_rest = true;
-                    continue;
-                }
+                continue;
             }
 
             let value = match value {
@@ -268,24 +224,44 @@ impl Pattern {
                 },
                 _ => return Err(PatternError::TypeError),
             };
+
             event.insert(*key, value);
         }
 
-        let value = if is_rest {
-            EventValue::Rest
-        } else {
-            EventValue::Note(
-                event["note"] as u8,
-                event["velocity"] as u8,
-                event["channel"] as u8,
-            )
-        };
+        let value =
+            self.handle_notes(map["note"], event["velocity"] as u8, event["channel"] as u8)?;
 
         Ok(Event {
             value,
             dur: event["dur"],
             length: event["length"],
+            state: EventState::On,
         })
+    }
+
+    fn handle_notes(
+        &self,
+        value: &Value,
+        velocity: u8,
+        channel: u8,
+    ) -> Result<Vec<EventValue>, PatternError> {
+        if self.is_rest(value)? {
+            return Ok(vec![EventValue::Rest]);
+        }
+
+        let value = match value {
+            Value::Number(num) => match num {
+                ValueNumber::F64(val) => vec![*val],
+                ValueNumber::I64(val) => vec![*val as f64],
+            },
+            Value::List(list) => self.handle_notes_list(list)?,
+            _ => return Err(PatternError::TypeError),
+        };
+
+        Ok(value
+            .iter()
+            .map(|nn| EventValue::Note(*nn as u8, velocity, channel))
+            .collect())
     }
 
     fn is_rest(&self, value: &Value) -> Result<bool, PatternError> {
@@ -300,13 +276,26 @@ impl Pattern {
         Ok(false)
     }
 
+    fn handle_notes_list(&self, list: &ValueList) -> Result<Vec<f64>, PatternError> {
+        list.data()
+            .iter()
+            .map(|val| match val {
+                Value::Number(num) => match num {
+                    ValueNumber::F64(v) => Ok(*v),
+                    ValueNumber::I64(v) => Ok(*v as f64),
+                },
+                _ => Err(PatternError::TypeError),
+            })
+            .collect()
+    }
+
     fn post_error(&self, error: PatternError) {
         self.parameters.append_console(&format!("{}\n", error));
     }
 }
 
 impl Iterator for Pattern {
-    type Item = Vec<Event>;
+    type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut iterator = self.iterator.clone();
@@ -314,55 +303,65 @@ impl Iterator for Pattern {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum ScheduledEvent {
-    On(f64, i32, Event), // beat position, sample position, event
-    Off(f64, i32, Event),
+#[derive(Debug, Clone)]
+pub(crate) struct ScheduledEvent {
+    beat_pos: f64,
+    sample_pos: i32,
+    event: Event,
 }
 
 impl ScheduledEvent {
-    pub(crate) fn into_vst_midi(self, block_size: i32) -> Option<MidiEvent> {
-        let (pos, midi_data) = match self {
-            Self::On(_, sp, e) => match e.value {
-                EventValue::Rest => return None,
-                EventValue::Note(nn, vel, ch) => (sp, [0x90 + ch, nn, vel]),
-            },
-            Self::Off(_, sp, e) => match e.value {
-                EventValue::Rest => return None,
-                EventValue::Note(nn, vel, ch) => (sp, [0x80 + ch, nn, vel]),
-            },
+    pub(crate) fn into_vst_midi(self, block_size: i32) -> Vec<MidiEvent> {
+        let status_byte = match self.event.state {
+            EventState::On => 0x90,
+            EventState::Off => 0x80,
         };
 
-        let delta_frames = pos % block_size;
+        let delta_frames = self.sample_pos % block_size;
 
-        Some(MidiEvent {
-            event_type: EventType::Midi,
-            byte_size: 8,
-            delta_frames,
-            flags: MidiEventFlags::REALTIME_EVENT.bits(),
-            note_length: 0,
-            note_offset: 0,
-            midi_data,
-            _midi_reserved: 0,
-            detune: 0,
-            note_off_velocity: 0,
-            _reserved1: 0,
-            _reserved2: 0,
-        })
+        self.event
+            .value
+            .iter()
+            .filter_map(|value| match value {
+                EventValue::Note(ch, nn, vel) => Some([status_byte + ch, *nn, *vel]),
+                &EventValue::Rest => None,
+            })
+            .map(|midi_data| MidiEvent {
+                event_type: EventType::Midi,
+                byte_size: 8,
+                delta_frames,
+                flags: MidiEventFlags::REALTIME_EVENT.bits(),
+                note_length: 0,
+                note_offset: 0,
+                midi_data,
+                _midi_reserved: 0,
+                detune: 0,
+                note_off_velocity: 0,
+                _reserved1: 0,
+                _reserved2: 0,
+            })
+            .collect()
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct Event {
-    pub(crate) value: EventValue,
+    pub(crate) value: Vec<EventValue>,
     pub(crate) dur: f64,
     pub(crate) length: f64,
+    pub(crate) state: EventState,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum EventValue {
     Note(u8, u8, u8), // note number, velocity, channel number
     Rest,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum EventState {
+    On,
+    Off,
 }
 
 #[derive(Debug, Error)]

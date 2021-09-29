@@ -25,13 +25,13 @@ use std::sync::{Arc, Mutex, Once};
 
 use log::{info, LevelFilter};
 
-use vst::api::{Event, EventType, Events, MidiEvent, MidiEventFlags, Supported};
+use vst::api::{Event, Events, Supported};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
 use parameters::Parameters;
-use pattern::{make_module, ScheduledEvent, Scheduler};
+use pattern::{make_module, Scheduler};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -41,7 +41,6 @@ struct Kotoist {
     host: HostCallback,
     sample_rate: f32,
     block_size: i64,
-    count: i64,
     parameters: Arc<Parameters>,
     scheduler: Arc<Mutex<Scheduler>>,
 }
@@ -117,7 +116,9 @@ impl Plugin for Kotoist {
         let events = self.scheduler.lock().unwrap().process();
 
         for event in events {
-            if let Some(mut event) = event.into_vst_midi(self.block_size as i32) {
+            let events = event.into_vst_midi(self.block_size as i32);
+
+            for mut event in events.into_iter() {
                 let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
                 let events = Events {
                     num_events: 1,

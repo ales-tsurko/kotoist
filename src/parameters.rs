@@ -41,9 +41,9 @@ impl Parameters {
         match koto.compile(code) {
             Ok(_) => match koto.run() {
                 Ok(result) => self.append_console(&format!("{}\n", result)),
-                Err(err) => self.append_console(&format!("Runtime error: {}", err)),
+                Err(err) => self.append_console(&format!("Runtime error: {}\n", err)),
             },
-            Err(err) => self.append_console(&format!("Compiler error: {}", err)),
+            Err(err) => self.append_console(&format!("Compiler error: {}\n", err)),
         }
     }
 
