@@ -134,7 +134,7 @@ impl Scheduler {
         let note_off_pos = beat_pos + event.length;
         event.state = EventState::Off;
         self.note_offs.push(ScheduledEvent {
-            beat_pos,
+            beat_pos: note_off_pos,
             sample_pos: sample_pos as i32,
             event,
         });
