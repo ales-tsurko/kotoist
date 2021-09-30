@@ -44,7 +44,6 @@ pub(crate) struct Scheduler {
     queued_pattern: RwLock<Option<ScheduledPattern>>,
     pattern: RwLock<Option<ScheduledPattern>>,
     wait_until: f64,
-    note_offs: Vec<ScheduledEvent>,
 }
 
 impl Scheduler {
@@ -57,43 +56,45 @@ impl Scheduler {
     }
 
     fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
-        let (position, _) = self.position();
+        let position = self.position();
         let offset = quant - (position % quant);
         let position = offset + position;
         *self.queued_pattern.write().unwrap() = Some(ScheduledPattern { position, pattern });
     }
 
-    fn position(&self) -> (f64, f64) {
-        // (beat position, sample position)
-        let time_info = self
-            .host
+    fn position(&self) -> f64 {
+        self.host
             .get_time_info(TimeInfoFlags::TEMPO_VALID.bits())
-            .unwrap();
-        let beats_per_sec = time_info.tempo / 60.0;
-        let beat_length = time_info.sample_rate / beats_per_sec;
-        (time_info.sample_pos / beat_length, time_info.sample_pos)
+            .unwrap()
+            .sample_pos
     }
 
-    pub(crate) fn process(&mut self) -> Vec<ScheduledEvent> {
+    pub(crate) fn process(&mut self) -> Option<Vec<MidiEvent>> {
         if !self.is_playing() {
-            return vec![];
+            return None;
         }
 
-        let (position, sample_pos) = self.position();
+        let position = self.position();
         self.check_queued(position);
-        let mut result = vec![];
 
-        if let Some(pattern) = self.pattern.get_mut().unwrap() {
-            if position >= self.wait_until {
-                if let Some(event) = pattern.pattern.next() {
-                    result.push(self.process_events(position, sample_pos, event));
-                }
+        let result = if let Some(pattern) = self.pattern.get_mut().unwrap() {
+            if position < self.wait_until {
+                return None;
             }
-        }
+            pattern
+                .pattern
+                .next()
+                .map(|event| self.process_events(position, event))
+        } else {
+            None
+        };
 
-        let mut note_offs = self.note_offs_at(position);
-        result.append(&mut note_offs);
-        result
+        result.map(|event| {
+            let beat_length = self.beat_length();
+            let length = event.event.length * beat_length * event.event.dur;
+            let length = length - (position % length) - 1.0;
+            event.into_vst_midi(self.host.get_block_size() as f64, length)
+        })
     }
 
     fn is_playing(&mut self) -> bool {
@@ -118,38 +119,21 @@ impl Scheduler {
         }
     }
 
-    fn process_events(&mut self, beat_pos: f64, sample_pos: f64, event: Event) -> ScheduledEvent {
-        self.wait_until = beat_pos + event.dur;
+    fn process_events(&mut self, position: f64, event: Event) -> ScheduledEvent {
+        let end = event.dur * self.beat_length();
+        let offset = position % end;
+        self.wait_until = position + end - offset;
 
-        self.append_note_off(event.clone(), beat_pos, sample_pos);
-
-        ScheduledEvent {
-            beat_pos,
-            sample_pos: sample_pos as i32,
-            event,
-        }
+        ScheduledEvent { position, event }
     }
 
-    fn append_note_off(&mut self, mut event: Event, beat_pos: f64, sample_pos: f64) {
-        let note_off_pos = beat_pos + event.length;
-        event.state = EventState::Off;
-        self.note_offs.push(ScheduledEvent {
-            beat_pos: note_off_pos,
-            sample_pos: sample_pos as i32,
-            event,
-        });
-    }
-
-    fn note_offs_at(&mut self, position: f64) -> Vec<ScheduledEvent> {
-        // return (and remove from the list) note offs which valid for current position
-        let (result, sched): (Vec<ScheduledEvent>, Vec<ScheduledEvent>) = self
-            .note_offs
-            .iter()
-            .cloned()
-            .partition(|e| e.beat_pos >= position)
-            .to_owned();
-        self.note_offs = sched;
-        return result;
+    fn beat_length(&self) -> f64 {
+        let time_info = self
+            .host
+            .get_time_info(TimeInfoFlags::TEMPO_VALID.bits())
+            .unwrap();
+        let beats_per_sec = time_info.tempo / 60.0;
+        time_info.sample_rate / beats_per_sec
     }
 }
 
@@ -235,7 +219,6 @@ impl Pattern {
             value,
             dur: event["dur"],
             length: event["length"],
-            state: EventState::On,
         })
     }
 
@@ -305,33 +288,27 @@ impl Iterator for Pattern {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ScheduledEvent {
-    beat_pos: f64,
-    sample_pos: i32,
+    position: f64,
     event: Event,
 }
 
 impl ScheduledEvent {
-    pub(crate) fn into_vst_midi(self, block_size: i32) -> Vec<MidiEvent> {
-        let status_byte = match self.event.state {
-            EventState::On => 0x90,
-            EventState::Off => 0x80,
-        };
-
-        let delta_frames = self.sample_pos % block_size;
+    pub(crate) fn into_vst_midi(self, block_size: f64, length: f64) -> Vec<MidiEvent> {
+        let delta_frames = block_size - (self.position % block_size);
 
         self.event
             .value
             .iter()
             .filter_map(|value| match value {
-                EventValue::Note(ch, nn, vel) => Some([status_byte + ch, *nn, *vel]),
+                EventValue::Note(nn, vel, ch) => Some([0x90 + ch, *nn, *vel]),
                 &EventValue::Rest => None,
             })
             .map(|midi_data| MidiEvent {
                 event_type: EventType::Midi,
                 byte_size: 8,
-                delta_frames,
+                delta_frames: delta_frames as i32,
                 flags: MidiEventFlags::REALTIME_EVENT.bits(),
-                note_length: 0,
+                note_length: length as i32,
                 note_offset: 0,
                 midi_data,
                 _midi_reserved: 0,
@@ -349,19 +326,12 @@ pub(crate) struct Event {
     pub(crate) value: Vec<EventValue>,
     pub(crate) dur: f64,
     pub(crate) length: f64,
-    pub(crate) state: EventState,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum EventValue {
     Note(u8, u8, u8), // note number, velocity, channel number
     Rest,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum EventState {
-    On,
-    Off,
 }
 
 #[derive(Debug, Error)]
