@@ -44,6 +44,7 @@ pub(crate) struct Scheduler {
     queued_pattern: RwLock<Option<ScheduledPattern>>,
     pattern: RwLock<Option<ScheduledPattern>>,
     wait_until: f64,
+    last_position: f64,
 }
 
 impl Scheduler {
@@ -56,13 +57,9 @@ impl Scheduler {
     }
 
     fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
-        let mut position = self.position();
+        let position = self.position();
         let offset = quant - (position % quant);
-        if self.is_playing() {
-            position = offset + position;
-        } else {
-            position = offset;
-        }
+        let position = offset + position;
         *self.queued_pattern.write().unwrap() = Some(ScheduledPattern { position, pattern });
     }
 
@@ -73,23 +70,21 @@ impl Scheduler {
             .sample_pos
     }
 
-    fn is_playing(&self) -> bool {
-        if let Some(time_info) = self.host.get_time_info(0) {
-            return TimeInfoFlags::from_bits(time_info.flags)
-                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
-                .unwrap_or(false);
-        }
-
-        false
-    }
-
     pub(crate) fn process(&mut self) -> Option<Vec<MidiEvent>> {
         if !self.is_playing() {
+            self.wait_until = self.wait_until - self.last_position;
             return None;
         }
 
         let position = self.position();
-        self.check_queued(position);
+
+        if position < self.last_position {
+            self.wait_until = self.wait_until - self.last_position;
+        }
+
+        self.last_position = self.position();
+
+        self.check_queued(self.last_position);
 
         let result = if let Some(pattern) = self.pattern.get_mut().unwrap() {
             if position < self.wait_until {
@@ -109,6 +104,16 @@ impl Scheduler {
             let length = length - (position % length) - 1.0;
             event.into_vst_midi(self.host.get_block_size() as f64, length)
         })
+    }
+
+    fn is_playing(&self) -> bool {
+        if let Some(time_info) = self.host.get_time_info(0) {
+            return TimeInfoFlags::from_bits(time_info.flags)
+                .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
+                .unwrap_or(false);
+        }
+
+        false
     }
 
     /// check if the queued pattern should play
