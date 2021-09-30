@@ -58,16 +58,23 @@ impl Scheduler {
 
     fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
         let position = self.position();
-        let offset = quant - (position % quant);
+        let quant_samples = quant * self.beat_length();
+        let offset = quant_samples - (position % quant_samples);
         let position = offset + position;
         *self.queued_pattern.write().unwrap() = Some(ScheduledPattern { position, pattern });
     }
 
     fn position(&self) -> f64 {
-        self.host
+        self.host.get_time_info(0).unwrap().sample_pos
+    }
+
+    fn beat_length(&self) -> f64 {
+        let time_info = self
+            .host
             .get_time_info(TimeInfoFlags::TEMPO_VALID.bits())
-            .unwrap()
-            .sample_pos
+            .unwrap();
+        let beats_per_sec = time_info.tempo / 60.0;
+        time_info.sample_rate / beats_per_sec
     }
 
     pub(crate) fn process(&mut self) -> Option<Vec<MidiEvent>> {
@@ -119,7 +126,7 @@ impl Scheduler {
     fn check_queued(&mut self, position: f64) {
         let queued = self.queued_pattern.get_mut().unwrap();
         if let Some(pattern) = queued.take() {
-            if pattern.position <= position {
+            if position >= pattern.position {
                 *self.pattern.get_mut().unwrap() = Some(pattern);
             } else {
                 *queued = Some(pattern);
@@ -133,15 +140,6 @@ impl Scheduler {
         self.wait_until = position + end - offset;
 
         ScheduledEvent { position, event }
-    }
-
-    fn beat_length(&self) -> f64 {
-        let time_info = self
-            .host
-            .get_time_info(TimeInfoFlags::TEMPO_VALID.bits())
-            .unwrap();
-        let beats_per_sec = time_info.tempo / 60.0;
-        time_info.sample_rate / beats_per_sec
     }
 }
 
