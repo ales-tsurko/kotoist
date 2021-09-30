@@ -11,7 +11,7 @@ use vst::plugin::HostCallback;
 
 use crate::parameters::Parameters;
 
-pub(crate) fn make_module(scheduler: Arc<Mutex<Scheduler>>) -> ValueMap {
+pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
     use Value::{Empty, Iterator, Number};
 
     let mut result = ValueMap::new();
@@ -23,9 +23,9 @@ pub(crate) fn make_module(scheduler: Arc<Mutex<Scheduler>>) -> ValueMap {
                     ValueNumber::F64(num) => *num,
                     ValueNumber::I64(num) => *num as f64,
                 };
-                let scheduler = scheduler.lock().unwrap();
-                scheduler.schedule_pattern(
-                    Pattern::new(iterator.to_owned(), Arc::clone(&scheduler.parameters)),
+                let player = player.lock().unwrap();
+                player.schedule_stream(
+                    EventStream::new(iterator.to_owned(), Arc::clone(&player.parameters)),
                     quant,
                 );
                 Ok(Empty)
@@ -38,16 +38,16 @@ pub(crate) fn make_module(scheduler: Arc<Mutex<Scheduler>>) -> ValueMap {
 }
 
 #[derive(Default)]
-pub(crate) struct Scheduler {
+pub(crate) struct Player {
     host: HostCallback,
     parameters: Arc<Parameters>,
-    queued_pattern: RwLock<Option<ScheduledPattern>>,
-    pattern: RwLock<Option<ScheduledPattern>>,
+    queued_stream: RwLock<Option<ScheduledEventStream>>,
+    stream: RwLock<Option<ScheduledEventStream>>,
     wait_until: f64,
     last_position: f64,
 }
 
-impl Scheduler {
+impl Player {
     pub(crate) fn new(host: HostCallback, parameters: Arc<Parameters>) -> Self {
         Self {
             host,
@@ -56,12 +56,12 @@ impl Scheduler {
         }
     }
 
-    fn schedule_pattern(&self, pattern: Pattern, quant: f64) {
+    fn schedule_stream(&self, e_stream: EventStream, quant: f64) {
         let position = self.position();
         let quant_samples = quant * self.beat_length();
         let offset = quant_samples - (position % quant_samples);
         let position = offset + position;
-        *self.queued_pattern.write().unwrap() = Some(ScheduledPattern { position, pattern });
+        *self.queued_stream.write().unwrap() = Some(ScheduledEventStream { position, e_stream });
     }
 
     fn position(&self) -> f64 {
@@ -77,7 +77,7 @@ impl Scheduler {
         time_info.sample_rate / beats_per_sec
     }
 
-    pub(crate) fn process(&mut self) -> Option<Vec<MidiEvent>> {
+    pub(crate) fn tick(&mut self) -> Option<Vec<MidiEvent>> {
         if !self.is_playing() {
             self.wait_until = self.wait_until - self.last_position;
             return None;
@@ -93,12 +93,12 @@ impl Scheduler {
 
         self.check_queued(self.last_position);
 
-        let result = if let Some(pattern) = self.pattern.get_mut().unwrap() {
+        let result = if let Some(stream) = self.stream.get_mut().unwrap() {
             if position < self.wait_until {
                 return None;
             }
-            pattern
-                .pattern
+            stream
+                .e_stream
                 .next()
                 .map(|event| self.process_events(position, event))
         } else {
@@ -124,12 +124,12 @@ impl Scheduler {
 
     /// check if the queued pattern should play
     fn check_queued(&mut self, position: f64) {
-        let queued = self.queued_pattern.get_mut().unwrap();
-        if let Some(pattern) = queued.take() {
-            if position >= pattern.position {
-                *self.pattern.get_mut().unwrap() = Some(pattern);
+        let queued = self.queued_stream.get_mut().unwrap();
+        if let Some(stream) = queued.take() {
+            if position >= stream.position {
+                *self.stream.get_mut().unwrap() = Some(stream);
             } else {
-                *queued = Some(pattern);
+                *queued = Some(stream);
             }
         }
     }
@@ -143,19 +143,19 @@ impl Scheduler {
     }
 }
 
-struct ScheduledPattern {
+struct ScheduledEventStream {
     position: f64,
-    pattern: Pattern,
+    e_stream: EventStream,
 }
 
-struct Pattern {
+struct EventStream {
     iterator: ValueIterator,
     parameters: Arc<Parameters>,
 }
 
-impl Pattern {
+impl EventStream {
     fn new(iterator: ValueIterator, parameters: Arc<Parameters>) -> Self {
-        Self {
+        EventStream {
             iterator,
             parameters,
         }
@@ -283,7 +283,7 @@ impl Pattern {
     }
 }
 
-impl Iterator for Pattern {
+impl Iterator for EventStream {
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {

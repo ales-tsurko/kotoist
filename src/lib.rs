@@ -31,7 +31,7 @@ use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::KotoistEditor;
 use parameters::Parameters;
-use pattern::{make_module, Scheduler};
+use pattern::{make_module, Player};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
@@ -42,7 +42,7 @@ struct Kotoist {
     sample_rate: f32,
     block_size: i64,
     parameters: Arc<Parameters>,
-    scheduler: Arc<Mutex<Scheduler>>,
+    scheduler: Arc<Mutex<Player>>,
 }
 
 impl Plugin for Kotoist {
@@ -50,7 +50,7 @@ impl Plugin for Kotoist {
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
         let parameters = Arc::new(parameters);
-        let scheduler = Arc::new(Mutex::new(Scheduler::new(
+        let scheduler = Arc::new(Mutex::new(Player::new(
             host.clone(),
             Arc::clone(&parameters),
         )));
@@ -113,7 +113,7 @@ impl Plugin for Kotoist {
     }
 
     fn process(&mut self, _buffer: &mut AudioBuffer<'_, f32>) {
-        if let Some(events) = self.scheduler.lock().unwrap().process() {
+        if let Some(events) = self.scheduler.lock().unwrap().tick() {
             for mut event in events.into_iter() {
                 let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
                 let events = Events {
