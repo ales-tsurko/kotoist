@@ -100,8 +100,7 @@ impl Scheduler {
 
         result.map(|event| {
             let beat_length = self.beat_length();
-            let length = event.event.length * beat_length * event.event.dur;
-            let length = length - (position % length) - 1.0;
+            let length = event.event.length * beat_length * event.event.dur - 1.0;
             event.into_vst_midi(self.host.get_block_size() as f64, length)
         })
     }
