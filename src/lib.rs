@@ -112,8 +112,8 @@ impl Plugin for Kotoist {
         }
     }
 
-    fn process(&mut self, buffer: &mut AudioBuffer<'_, f32>) {
-        if let Some(events) = self.scheduler.lock().unwrap().process(1.0) {
+    fn process(&mut self, _buffer: &mut AudioBuffer<'_, f32>) {
+        if let Some(events) = self.scheduler.lock().unwrap().process() {
             for mut event in events.into_iter() {
                 let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
                 let events = Events {
