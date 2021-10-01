@@ -142,19 +142,19 @@ impl Plugin for Kotoist {
 fn init_log() {
     ONCE.call_once(|| {
         let path = format!("{}/Desktop/kotoist.log", std::env::var("HOME").unwrap());
-        _init_log(path);
+        _init_log(path, LevelFilter::Debug);
         info!("init log");
     });
 }
 
 #[cfg(windows)]
-fn _init_log(path: String) {
+fn _init_log(path: String, level: LevelFilter) {
     use simple_logging;
-    simple_logging::log_to_file(path, LevelFilter::Info).unwrap();
+    simple_logging::log_to_file(path, level).unwrap();
 }
 
 #[cfg(unix)]
-fn _init_log(path: String) {
+fn _init_log(path: String, level: LevelFilter) {
     use simplelog::{ConfigBuilder, WriteLogger};
     use std::fs::OpenOptions;
 
@@ -164,7 +164,7 @@ fn _init_log(path: String) {
         .open(path)
         .unwrap();
     let config = ConfigBuilder::new().set_time_to_local(true).build();
-    let _ = WriteLogger::init(LevelFilter::Info, config, file).unwrap();
+    let _ = WriteLogger::init(level, config, file).unwrap();
 }
 
 #[allow(missing_docs)]

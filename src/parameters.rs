@@ -21,6 +21,7 @@ impl Parameters {
         if let Some(host) = self.host {
             *self.code.write().unwrap() = code.to_string();
             host.update_display(); // notify host that the plugin is changing a parameter
+            host.automate(0, 0.0);
         }
     }
 
