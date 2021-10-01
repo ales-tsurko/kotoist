@@ -6,7 +6,8 @@ use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, RwLock};
 
 use koto::runtime::{
-    runtime_error, Value, ValueIterator, ValueIteratorOutput, ValueList, ValueMap, ValueNumber,
+    runtime_error, DataMap, Value, ValueIterator, ValueIteratorOutput, ValueList, ValueMap,
+    ValueNumber,
 };
 use thiserror::Error;
 use vst::api::{EventType, MidiEvent, MidiEventFlags, TimeInfoFlags};
@@ -60,7 +61,11 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
     result.add_fn("print_scales", {
         move |vm, args| match vm.get_args(args) {
             [] => {
-                player_cl.lock().unwrap().parameters.append_console(&Scale::list());
+                player_cl
+                    .lock()
+                    .unwrap()
+                    .parameters
+                    .append_console(&Scale::list());
                 Ok(Empty)
             }
             _ => runtime_error!("pattern.print_scales: doesn't expect any arguments"),
@@ -71,23 +76,43 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
 }
 
 struct EventPattern {
-    dur: Stream<f64>,
-    length: Stream<f64>,
-    degree: Stream<Vec<f64>>,
-    scale: Stream<Scale>,
-    root: Stream<f64>,
-    transpose: Stream<f64>,
-    mtranspose: Stream<f64>,
-    octave: Stream<f64>,
-    channel: Stream<f64>,
-    amp: Stream<f64>,
+    dur: StreamF64,
+    length: StreamF64,
+    // degree: dyn Stream<Item = Vec<f64>, Error = EventPatternError>,
+    // scale: dyn Stream<Item = Scale, Error = EventPatternError>,
+    root: StreamF64,
+    transpose: StreamF64,
+    mtranspose: StreamF64,
+    octave: StreamF64,
+    channel: StreamF64,
+    amp: StreamF64,
 }
 
 impl TryFrom<&ValueMap> for EventPattern {
-    type Error = EventPatternError;
+    type Error = StreamError;
 
     fn try_from(map: &ValueMap) -> Result<Self, Self::Error> {
-        todo!()
+        let map = map.data();
+
+        let dur = StreamF64::from_map(&map, "dur", 1.0)?;
+        let length = StreamF64::from_map(&map, "length", 1.0)?;
+        let root = StreamF64::from_map(&map, "root", 0.0)?;
+        let transpose = StreamF64::from_map(&map, "transpose", 0.0)?;
+        let mtranspose = StreamF64::from_map(&map, "mtranspose", 0.0)?;
+        let octave = StreamF64::from_map(&map, "octave", 4.0)?;
+        let channel = StreamF64::from_map(&map, "channel", 0.0)?;
+        let amp = StreamF64::from_map(&map, "amp", 0.85)?;
+
+        Ok(Self {
+            dur,
+            length,
+            root,
+            transpose,
+            mtranspose,
+            octave,
+            channel,
+            amp,
+        })
     }
 }
 
@@ -99,15 +124,91 @@ impl Iterator for EventPattern {
     }
 }
 
-struct Stream<V> {
-    data: PhantomData<V>,
+trait Stream {
+    type Item;
+    type Error;
+
+    fn from_koto_value(value: &Value) -> Result<Self, Self::Error>
+    where
+        Self: Sized;
+
+    fn try_next(&mut self) -> Result<Option<Self::Item>, Self::Error>;
 }
 
-impl<V> Iterator for Stream<V> {
-    type Item = V;
+struct StreamF64 {
+    value: Option<f64>,
+    iterator: Option<ValueIterator>,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+impl StreamF64 {
+    fn from_map(map: &DataMap, key: &str, default: f64) -> Result<Self, StreamError> {
+        match map.get_with_string(key) {
+            Some(value) => StreamF64::from_koto_value(value),
+            None => StreamF64::from_koto_value(&Value::Number(ValueNumber::F64(default))),
+        }
+    }
+}
+
+impl Stream for StreamF64 {
+    type Item = f64;
+    type Error = StreamError;
+
+    fn from_koto_value(value: &Value) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        match value {
+            Value::Number(num) => match num {
+                ValueNumber::F64(val) => Ok(Self {
+                    value: Some(*val),
+                    iterator: None,
+                }),
+                ValueNumber::I64(val) => Ok(Self {
+                    value: Some(*val as f64),
+                    iterator: None,
+                }),
+            },
+            Value::Iterator(iterator) => Ok(Self {
+                value: None,
+                iterator: Some(iterator.clone()),
+            }),
+            value => Err(StreamError::ValueTypeError(
+                format!("{}", value),
+                "number or iterator".to_string(),
+            )),
+        }
+    }
+
+    fn try_next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
+        if let Some(value) = self.value {
+            Ok(Some(value))
+        } else {
+            // we expect iterator here, if there's no value
+            self.iterator
+                .as_mut()
+                .expect("the iterator is unexpectedly None")
+                .next()
+                .map(|val| match val {
+                    ValueIteratorOutput::Value(value) => match value {
+                        Value::Number(num) => match num {
+                            ValueNumber::F64(val) => Ok(val),
+                            ValueNumber::I64(val) => Ok(val as f64),
+                        },
+                        other => Err(StreamError::ReturnTypeError(
+                            format!("{}", other),
+                            "number".to_string(),
+                        )),
+                    },
+                    ValueIteratorOutput::ValuePair(_, _) => Err(StreamError::ReturnTypeError(
+                        "value pair".to_string(),
+                        "number".to_string(),
+                    )),
+                    ValueIteratorOutput::Error(err) => {
+                        Err(StreamError::IteratorError(format!("{}", err)))
+                    }
+                })
+                .transpose()
+        }
     }
 }
 
@@ -247,9 +348,11 @@ impl EventStream {
                         return self.next_in_iterator(&mut iterator.clone());
                     }
                     Value::Empty => return None,
-                    _ => self.post_error(StreamError::TypeError),
+                    _ => self.post_error(EventStreamError::TypeError),
                 },
-                ValueIteratorOutput::ValuePair(_, _) => self.post_error(StreamError::TypeError),
+                ValueIteratorOutput::ValuePair(_, _) => {
+                    self.post_error(EventStreamError::TypeError)
+                }
                 ValueIteratorOutput::Error(err) => {
                     self.parameters.append_console(&format!("{}", err))
                 }
@@ -259,12 +362,15 @@ impl EventStream {
         None
     }
 
-    fn event_from_koto(&mut self, koto_event: &ValueMap) -> Result<Event, StreamError> {
+    fn event_from_koto(&mut self, koto_event: &ValueMap) -> Result<Event, EventStreamError> {
         let map = koto_event.data();
         let keys = vec!["dur", "length", "channel", "note", "velocity"];
-        let values: Result<Vec<&Value>, StreamError> = keys
+        let values: Result<Vec<&Value>, EventStreamError> = keys
             .iter()
-            .map(|k| map.get_with_string(k).ok_or(StreamError::EventTypeError))
+            .map(|k| {
+                map.get_with_string(k)
+                    .ok_or(EventStreamError::EventTypeError)
+            })
             .collect();
         let mut event = HashMap::new();
         values?.into_iter().enumerate().for_each(|(n, val)| {
@@ -274,7 +380,7 @@ impl EventStream {
         self.event_from_map(event)
     }
 
-    fn event_from_map(&self, map: HashMap<&str, &Value>) -> Result<Event, StreamError> {
+    fn event_from_map(&self, map: HashMap<&str, &Value>) -> Result<Event, EventStreamError> {
         let mut event = HashMap::new();
         for (key, value) in map.iter() {
             if *key == "note" {
@@ -286,7 +392,7 @@ impl EventStream {
                     ValueNumber::F64(val) => *val,
                     ValueNumber::I64(val) => *val as f64,
                 },
-                _ => return Err(StreamError::TypeError),
+                _ => return Err(EventStreamError::TypeError),
             };
 
             event.insert(*key, value);
@@ -307,7 +413,7 @@ impl EventStream {
         value: &Value,
         velocity: u8,
         channel: u8,
-    ) -> Result<Vec<EventValue>, StreamError> {
+    ) -> Result<Vec<EventValue>, EventStreamError> {
         if self.is_rest(value)? {
             return Ok(vec![EventValue::Rest]);
         }
@@ -318,7 +424,7 @@ impl EventStream {
                 ValueNumber::I64(val) => vec![*val as f64],
             },
             Value::List(list) => self.handle_notes_list(list)?,
-            _ => return Err(StreamError::TypeError),
+            _ => return Err(EventStreamError::TypeError),
         };
 
         Ok(value
@@ -327,19 +433,19 @@ impl EventStream {
             .collect())
     }
 
-    fn is_rest(&self, value: &Value) -> Result<bool, StreamError> {
+    fn is_rest(&self, value: &Value) -> Result<bool, EventStreamError> {
         if let Value::Str(val) = value {
             if val.as_str() == "rest" {
                 return Ok(true);
             }
 
-            return Err(StreamError::TypeError);
+            return Err(EventStreamError::TypeError);
         }
 
         Ok(false)
     }
 
-    fn handle_notes_list(&self, list: &ValueList) -> Result<Vec<f64>, StreamError> {
+    fn handle_notes_list(&self, list: &ValueList) -> Result<Vec<f64>, EventStreamError> {
         list.data()
             .iter()
             .map(|val| match val {
@@ -347,12 +453,12 @@ impl EventStream {
                     ValueNumber::F64(v) => Ok(*v),
                     ValueNumber::I64(v) => Ok(*v as f64),
                 },
-                _ => Err(StreamError::TypeError),
+                _ => Err(EventStreamError::TypeError),
             })
             .collect()
     }
 
-    fn post_error(&self, error: StreamError) {
+    fn post_error(&self, error: EventStreamError) {
         self.parameters.append_console(&format!("{}\n", error));
     }
 }
@@ -416,14 +522,22 @@ pub(crate) enum EventValue {
 
 #[derive(Debug, Error)]
 enum EventPatternError {
-    #[error("Unexpected return value type from stream")]
-    TypeError,
-    #[error("Event type is wrong or incomplete")]
-    EventTypeError,
+    #[error("Unexpected type for key '{0}', expected type is '{1}")]
+    KeyTypeError(String, String),
 }
 
 #[derive(Debug, Error)]
 enum StreamError {
+    #[error("Unexpected value type '{0}' in stream, expected type is '{1}")]
+    ValueTypeError(String, String),
+    #[error("Unexpected return type '{0}' in stream, expected type is '{1}")]
+    ReturnTypeError(String, String),
+    #[error("Error processing iterator: '{0}")]
+    IteratorError(String),
+}
+
+#[derive(Debug, Error)]
+enum EventStreamError {
     #[error("Unexpected return value type from stream")]
     TypeError,
     #[error("Event type is wrong or incomplete")]

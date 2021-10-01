@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use thiserror::Error;
 
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Scale {
     Acoustic,
     Minor,
