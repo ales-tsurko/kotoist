@@ -82,6 +82,66 @@ struct EventPattern {
     amp: StreamF64,
 }
 
+impl EventPattern {
+    fn try_next(&mut self) -> Result<Option<Event>, StreamError> {
+        macro_rules! extract_value {
+            ($name:ident) => {
+                match self.$name.try_next()? {
+                    Some(value) => value,
+                    None => return Ok(None),
+                }
+            };
+        }
+
+        let dur = extract_value!(dur);
+        let length = extract_value!(length);
+        let degree = extract_value!(degree);
+        let scale = extract_value!(scale);
+        let root = extract_value!(root);
+        let transpose = extract_value!(transpose);
+        let mtranspose = extract_value!(mtranspose);
+        let octave = extract_value!(octave);
+        let channel = extract_value!(channel) as u8;
+        let amp = extract_value!(amp);
+
+        let velocity = (127.0 * amp).max(0.0).min(127.0) as u8;
+
+        let pitches = self.make_pitches(degree, root, octave, scale, transpose, mtranspose);
+
+        let value: Vec<EventValue> = pitches
+            .iter()
+            .map(|pitch| EventValue::Note(*pitch, velocity, channel))
+            .collect();
+
+        Ok(Some(Event { value, dur, length }))
+    }
+
+    fn make_pitches(
+        &self,
+        degree: Vec<f64>,
+        root: f64,
+        octave: f64,
+        scale: Scale,
+        transpose: f64,
+        mtranspose: f64,
+    ) -> Vec<u8> {
+        let pitch_set: &[f64] = scale.into();
+        let octave = (12.0 * octave).max(0.0).min(120.0);
+        let root = root + octave + transpose;
+        // this way we handle the case when mtranspose is negative as well
+        let mtranspose = (pitch_set.len() + mtranspose as usize).max(0) % pitch_set.len();
+        let root = (root + pitch_set[mtranspose]) as u8;
+
+        degree
+            .iter()
+            .map(|p| {
+                let pitch = (pitch_set.len() + *p as usize).max(0) % pitch_set.len();
+                pitch_set[pitch] as u8 + root
+            })
+            .collect()
+    }
+}
+
 impl TryFrom<&ValueMap> for EventPattern {
     type Error = StreamError;
 
@@ -95,7 +155,7 @@ impl TryFrom<&ValueMap> for EventPattern {
         let root = StreamF64::from_map(&map, "root", 0.0)?;
         let transpose = StreamF64::from_map(&map, "transpose", 0.0)?;
         let mtranspose = StreamF64::from_map(&map, "mtranspose", 0.0)?;
-        let octave = StreamF64::from_map(&map, "octave", 4.0)?;
+        let octave = StreamF64::from_map(&map, "octave", 5.0)?;
         let channel = StreamF64::from_map(&map, "channel", 0.0)?;
         let amp = StreamF64::from_map(&map, "amp", 0.85)?;
 
@@ -111,12 +171,6 @@ impl TryFrom<&ValueMap> for EventPattern {
             channel,
             amp,
         })
-    }
-}
-
-impl EventPattern {
-    fn try_next(&mut self) -> Result<Option<Event>, StreamError> {
-        todo!()
     }
 }
 
