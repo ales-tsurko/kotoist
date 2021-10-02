@@ -2,7 +2,6 @@ mod scale;
 
 use std::collections::hash_map::HashMap;
 use std::convert::TryFrom;
-use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, RwLock};
 
 use koto::runtime::{
@@ -72,7 +71,7 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
 struct EventPattern {
     dur: StreamF64,
     length: StreamF64,
-    degree: StreamVecF64,
+    degree: StreamVecDegree,
     scale: StreamScale,
     root: StreamF64,
     transpose: StreamF64,
@@ -110,7 +109,10 @@ impl EventPattern {
 
         let value: Vec<EventValue> = pitches
             .iter()
-            .map(|pitch| EventValue::Note(*pitch, velocity, channel))
+            .map(|pitch| match pitch {
+                Degree::Pitch(pitch) => EventValue::Note(*pitch as u8, velocity, channel),
+                Degree::Rest => EventValue::Rest,
+            })
             .collect();
 
         Ok(Some(Event { value, dur, length }))
@@ -118,25 +120,28 @@ impl EventPattern {
 
     fn make_pitches(
         &self,
-        degree: Vec<f64>,
+        degree: Vec<Degree>,
         root: f64,
         octave: f64,
         scale: Scale,
         transpose: f64,
         mtranspose: f64,
-    ) -> Vec<u8> {
+    ) -> Vec<Degree> {
         let pitch_set: &[f64] = scale.into();
         let octave = (12.0 * octave).max(0.0).min(120.0);
         let root = root + octave + transpose;
         // this way we handle the case when mtranspose is negative as well
         let mtranspose = (pitch_set.len() + mtranspose as usize).max(0) % pitch_set.len();
-        let root = (root + pitch_set[mtranspose]) as u8;
+        let root = root + pitch_set[mtranspose];
 
         degree
             .iter()
-            .map(|p| {
-                let pitch = (pitch_set.len() + *p as usize).max(0) % pitch_set.len();
-                pitch_set[pitch] as u8 + root
+            .map(|d| match d {
+                Degree::Pitch(p) => {
+                    let pitch = (pitch_set.len() + *p as usize).max(0) % pitch_set.len();
+                    Degree::Pitch(pitch_set[pitch] + root)
+                }
+                _ => Degree::Rest,
             })
             .collect()
     }
@@ -150,7 +155,7 @@ impl TryFrom<&ValueMap> for EventPattern {
 
         let dur = StreamF64::from_map(&map, "dur", 1.0)?;
         let length = StreamF64::from_map(&map, "length", 1.0)?;
-        let degree = StreamVecF64::from_map(&map, "degree", 0.0)?;
+        let degree = StreamVecDegree::from_map(&map, "degree", 0.0)?;
         let scale = StreamScale::from_map(&map, "scale", "chromatic")?;
         let root = StreamF64::from_map(&map, "root", 0.0)?;
         let transpose = StreamF64::from_map(&map, "transpose", 0.0)?;
@@ -253,35 +258,42 @@ impl Stream for StreamF64 {
     }
 }
 
-struct StreamVecF64 {
-    value: Option<Vec<f64>>,
+struct StreamVecDegree {
+    value: Option<Vec<Degree>>,
     iterator: Option<ValueIterator>,
 }
 
-impl StreamVecF64 {
+impl StreamVecDegree {
     fn from_map(map: &DataMap, key: &str, default: f64) -> Result<Self, StreamError> {
         match map.get_with_string(key) {
-            Some(value) => StreamVecF64::from_koto_value(value),
-            None => StreamVecF64::from_koto_value(&Value::Number(default.into())),
+            Some(value) => StreamVecDegree::from_koto_value(value),
+            None => StreamVecDegree::from_koto_value(&Value::Number(default.into())),
         }
     }
 
-    fn process_list(&self, list: ValueList) -> Result<Vec<f64>, StreamError> {
+    fn process_list(&self, list: ValueList) -> Result<Vec<Degree>, StreamError> {
         list.data()
             .iter()
             .map(|value| match value {
-                Value::Number(num) => Ok(f64::from(num)),
+                Value::Number(num) => Ok(Degree::Pitch(f64::from(num))),
+                Value::Str(value) => match value.as_str() {
+                    "rest" => Ok(Degree::Rest),
+                    other => Err(StreamError::ReturnTypeError(
+                        format!("{}", other),
+                        "number or rest".to_string(),
+                    )),
+                },
                 other => Err(StreamError::ReturnTypeError(
                     format!("{}", other),
-                    "number".to_string(),
+                    "number or rest".to_string(),
                 )),
             })
             .collect()
     }
 }
 
-impl Stream for StreamVecF64 {
-    type Item = Vec<f64>;
+impl Stream for StreamVecDegree {
+    type Item = Vec<Degree>;
     type Error = StreamError;
 
     fn from_koto_value(value: &Value) -> Result<Self, Self::Error>
@@ -289,17 +301,27 @@ impl Stream for StreamVecF64 {
         Self: Sized,
     {
         match value {
-            Value::Number(num) => Ok(Self {
-                value: Some(vec![f64::from(num)]),
+            Value::Number(num) => Ok(StreamVecDegree {
+                value: Some(vec![Degree::Pitch(f64::from(num))]),
                 iterator: None,
             }),
-            Value::Iterator(iterator) => Ok(Self {
+            Value::Str(value) => match value.as_str() {
+                "rest" => Ok(StreamVecDegree {
+                    value: Some(vec![Degree::Rest]),
+                    iterator: None,
+                }),
+                val => Err(StreamError::ValueTypeError(
+                    format!("{}", val),
+                    "number, iterator or rest".to_string(),
+                )),
+            },
+            Value::Iterator(iterator) => Ok(StreamVecDegree {
                 value: None,
                 iterator: Some(iterator.clone()),
             }),
             value => Err(StreamError::ValueTypeError(
                 format!("{}", value),
-                "number or iterator".to_string(),
+                "number, iterator or rest".to_string(),
             )),
         }
     }
@@ -315,16 +337,23 @@ impl Stream for StreamVecF64 {
                 .next()
                 .map(|val| match val {
                     ValueIteratorOutput::Value(value) => match value {
-                        Value::Number(num) => Ok(vec![f64::from(num)]),
+                        Value::Number(num) => Ok(vec![Degree::Pitch(f64::from(num))]),
+                        Value::Str(value) => match value.as_str() {
+                            "rest" => Ok(vec![Degree::Rest]),
+                            other => Err(StreamError::ReturnTypeError(
+                                format!("{}", other),
+                                "number or rest".to_string(),
+                            )),
+                        },
                         Value::List(list) => self.process_list(list),
                         other => Err(StreamError::ReturnTypeError(
                             format!("{}", other),
-                            "number".to_string(),
+                            "number or rest".to_string(),
                         )),
                     },
                     ValueIteratorOutput::ValuePair(_, _) => Err(StreamError::ReturnTypeError(
                         "value pair".to_string(),
-                        "number".to_string(),
+                        "number or rest".to_string(),
                     )),
                     ValueIteratorOutput::Error(err) => {
                         Err(StreamError::IteratorError(format!("{}", err)))
@@ -333,6 +362,12 @@ impl Stream for StreamVecF64 {
                 .transpose()
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Degree {
+    Pitch(f64),
+    Rest,
 }
 
 impl StreamScale {
