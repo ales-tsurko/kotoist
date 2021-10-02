@@ -27,10 +27,7 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
     result.add_fn("midi_out", {
         move |vm, args| match vm.get_args(args) {
             [Map(map), Number(quant)] => {
-                let quant = match quant {
-                    ValueNumber::F64(num) => *num,
-                    ValueNumber::I64(num) => *num as f64,
-                };
+                let quant = f64::from(quant);
                 match EventPattern::try_from(map) {
                     Ok(pattern) => todo!(),
                     Err(e) => runtime_error!("{}", e),
@@ -38,10 +35,7 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
             }
             [List(list), Number(quant)] => Ok(Empty),
             [Iterator(iterator), Number(quant)] => {
-                let quant = match quant {
-                    ValueNumber::F64(num) => *num,
-                    ValueNumber::I64(num) => *num as f64,
-                };
+                let quant = f64::from(quant);
                 let player = player_cl.lock().unwrap();
                 player.schedule_stream(
                     EventStream::new(iterator.to_owned(), Arc::clone(&player.parameters)),
@@ -78,8 +72,8 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
 struct EventPattern {
     dur: StreamF64,
     length: StreamF64,
-    // degree: dyn Stream<Item = Vec<f64>, Error = EventPatternError>,
-    // scale: dyn Stream<Item = Scale, Error = EventPatternError>,
+    degree: StreamVecF64,
+    scale: StreamScale,
     root: StreamF64,
     transpose: StreamF64,
     mtranspose: StreamF64,
@@ -96,6 +90,8 @@ impl TryFrom<&ValueMap> for EventPattern {
 
         let dur = StreamF64::from_map(&map, "dur", 1.0)?;
         let length = StreamF64::from_map(&map, "length", 1.0)?;
+        let degree = StreamVecF64::from_map(&map, "degree", 0.0)?;
+        let scale = StreamScale::from_map(&map, "scale", "chromatic")?;
         let root = StreamF64::from_map(&map, "root", 0.0)?;
         let transpose = StreamF64::from_map(&map, "transpose", 0.0)?;
         let mtranspose = StreamF64::from_map(&map, "mtranspose", 0.0)?;
@@ -106,6 +102,8 @@ impl TryFrom<&ValueMap> for EventPattern {
         Ok(Self {
             dur,
             length,
+            degree,
+            scale,
             root,
             transpose,
             mtranspose,
@@ -116,10 +114,8 @@ impl TryFrom<&ValueMap> for EventPattern {
     }
 }
 
-impl Iterator for EventPattern {
-    type Item = Event;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl EventPattern {
+    fn try_next(&mut self) -> Result<Option<Event>, StreamError> {
         todo!()
     }
 }
@@ -144,7 +140,7 @@ impl StreamF64 {
     fn from_map(map: &DataMap, key: &str, default: f64) -> Result<Self, StreamError> {
         match map.get_with_string(key) {
             Some(value) => StreamF64::from_koto_value(value),
-            None => StreamF64::from_koto_value(&Value::Number(ValueNumber::F64(default))),
+            None => StreamF64::from_koto_value(&Value::Number(default.into())),
         }
     }
 }
@@ -158,16 +154,10 @@ impl Stream for StreamF64 {
         Self: Sized,
     {
         match value {
-            Value::Number(num) => match num {
-                ValueNumber::F64(val) => Ok(Self {
-                    value: Some(*val),
-                    iterator: None,
-                }),
-                ValueNumber::I64(val) => Ok(Self {
-                    value: Some(*val as f64),
-                    iterator: None,
-                }),
-            },
+            Value::Number(num) => Ok(Self {
+                value: Some(f64::from(num)),
+                iterator: None,
+            }),
             Value::Iterator(iterator) => Ok(Self {
                 value: None,
                 iterator: Some(iterator.clone()),
@@ -190,10 +180,162 @@ impl Stream for StreamF64 {
                 .next()
                 .map(|val| match val {
                     ValueIteratorOutput::Value(value) => match value {
-                        Value::Number(num) => match num {
-                            ValueNumber::F64(val) => Ok(val),
-                            ValueNumber::I64(val) => Ok(val as f64),
-                        },
+                        Value::Number(num) => Ok(f64::from(num)),
+                        other => Err(StreamError::ReturnTypeError(
+                            format!("{}", other),
+                            "number".to_string(),
+                        )),
+                    },
+                    ValueIteratorOutput::ValuePair(_, _) => Err(StreamError::ReturnTypeError(
+                        "value pair".to_string(),
+                        "number".to_string(),
+                    )),
+                    ValueIteratorOutput::Error(err) => {
+                        Err(StreamError::IteratorError(format!("{}", err)))
+                    }
+                })
+                .transpose()
+        }
+    }
+}
+
+struct StreamVecF64 {
+    value: Option<Vec<f64>>,
+    iterator: Option<ValueIterator>,
+}
+
+impl StreamVecF64 {
+    fn from_map(map: &DataMap, key: &str, default: f64) -> Result<Self, StreamError> {
+        match map.get_with_string(key) {
+            Some(value) => StreamVecF64::from_koto_value(value),
+            None => StreamVecF64::from_koto_value(&Value::Number(default.into())),
+        }
+    }
+
+    fn process_list(&self, list: ValueList) -> Result<Vec<f64>, StreamError> {
+        list.data()
+            .iter()
+            .map(|value| match value {
+                Value::Number(num) => Ok(f64::from(num)),
+                other => Err(StreamError::ReturnTypeError(
+                    format!("{}", other),
+                    "number".to_string(),
+                )),
+            })
+            .collect()
+    }
+}
+
+impl Stream for StreamVecF64 {
+    type Item = Vec<f64>;
+    type Error = StreamError;
+
+    fn from_koto_value(value: &Value) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        match value {
+            Value::Number(num) => Ok(Self {
+                value: Some(vec![f64::from(num)]),
+                iterator: None,
+            }),
+            Value::Iterator(iterator) => Ok(Self {
+                value: None,
+                iterator: Some(iterator.clone()),
+            }),
+            value => Err(StreamError::ValueTypeError(
+                format!("{}", value),
+                "number or iterator".to_string(),
+            )),
+        }
+    }
+
+    fn try_next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
+        if let Some(ref value) = self.value {
+            Ok(Some(value.clone()))
+        } else {
+            // we expect iterator here, if there's no value
+            self.iterator
+                .as_mut()
+                .expect("the iterator is unexpectedly None")
+                .next()
+                .map(|val| match val {
+                    ValueIteratorOutput::Value(value) => match value {
+                        Value::Number(num) => Ok(vec![f64::from(num)]),
+                        Value::List(list) => self.process_list(list),
+                        other => Err(StreamError::ReturnTypeError(
+                            format!("{}", other),
+                            "number".to_string(),
+                        )),
+                    },
+                    ValueIteratorOutput::ValuePair(_, _) => Err(StreamError::ReturnTypeError(
+                        "value pair".to_string(),
+                        "number".to_string(),
+                    )),
+                    ValueIteratorOutput::Error(err) => {
+                        Err(StreamError::IteratorError(format!("{}", err)))
+                    }
+                })
+                .transpose()
+        }
+    }
+}
+
+impl StreamScale {
+    fn from_map(map: &DataMap, key: &str, default: &str) -> Result<Self, StreamError> {
+        match map.get_with_string(key) {
+            Some(value) => StreamScale::from_koto_value(value),
+            None => StreamScale::from_koto_value(&Value::Str(default.into())),
+        }
+    }
+}
+
+struct StreamScale {
+    value: Option<Scale>,
+    iterator: Option<ValueIterator>,
+}
+
+impl Stream for StreamScale {
+    type Item = Scale;
+    type Error = StreamError;
+
+    fn from_koto_value(value: &Value) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        match value {
+            Value::Str(value) => Scale::try_from(value.as_str().to_uppercase().as_str())
+                .map(|scale| Self {
+                    value: Some(scale),
+                    iterator: None,
+                })
+                .map_err(|e| StreamError::OtherError(format!("{}", e))),
+            Value::Iterator(iterator) => Ok(Self {
+                value: None,
+                iterator: Some(iterator.clone()),
+            }),
+            value => Err(StreamError::ValueTypeError(
+                format!("{}", value),
+                "number or iterator".to_string(),
+            )),
+        }
+    }
+
+    fn try_next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
+        if let Some(value) = self.value {
+            Ok(Some(value))
+        } else {
+            // we expect iterator here, if there's no value
+            self.iterator
+                .as_mut()
+                .expect("the iterator is unexpectedly None")
+                .next()
+                .map(|val| match val {
+                    ValueIteratorOutput::Value(value) => match value {
+                        Value::Str(value) => {
+                            Scale::try_from(value.as_str().to_uppercase().as_str())
+                                .map_err(|e| StreamError::OtherError(format!("{}", e)))
+                        }
                         other => Err(StreamError::ReturnTypeError(
                             format!("{}", other),
                             "number".to_string(),
@@ -534,6 +676,8 @@ enum StreamError {
     ReturnTypeError(String, String),
     #[error("Error processing iterator: '{0}")]
     IteratorError(String),
+    #[error("Error in stream: {0}")]
+    OtherError(String),
 }
 
 #[derive(Debug, Error)]
