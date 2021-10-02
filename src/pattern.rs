@@ -229,7 +229,7 @@ impl EventPattern {
         let channel = extract_value!(channel) as u8;
         let amp = extract_value!(amp);
 
-        let velocity = (127.0 * amp).max(0.0).min(127.0) as u8;
+        let velocity = (127.0 * amp).clamp(0.0, 127.0) as u8;
 
         let pitches = self.make_pitches(degree, root, octave, scale, transpose, mtranspose);
 
@@ -254,18 +254,20 @@ impl EventPattern {
         mtranspose: f64,
     ) -> Vec<Degree> {
         let pitch_set: &[f64] = scale.into();
-        let octave = (12.0 * octave).max(0.0).min(120.0);
+        let octave = (12.0 * octave).clamp(0.0, 120.0);
         let root = root + octave + transpose;
-        // this way we handle the case when mtranspose is negative as well
-        let mtranspose = (pitch_set.len() + mtranspose as usize).max(0) % pitch_set.len();
-        let root = root + pitch_set[mtranspose];
 
         degree
             .iter()
             .map(|d| match d {
                 Degree::Pitch(p) => {
-                    let pitch = (pitch_set.len() + *p as usize).max(0) % pitch_set.len();
-                    Degree::Pitch(pitch_set[pitch] + root)
+                    let pitch = mtranspose + p;
+                    let ps_len = pitch_set.len() as f64;
+                    let is_neg = pitch.is_sign_negative() as u8;
+                    let oct = ((pitch + is_neg as f64) / ps_len) as i16 - is_neg as i16;
+                    let pitch = (oct.abs() as f64 * 2.0 * ps_len + pitch) as usize % pitch_set.len();
+                    let oct = oct as f64 * 12.0;
+                    Degree::Pitch(pitch_set[pitch] + root + oct)
                 }
                 _ => Degree::Rest,
             })
