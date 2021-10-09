@@ -14,12 +14,12 @@ use vst::plugin::HostCallback;
 use crate::parameters::Parameters;
 use scale::Scale;
 
-pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
+pub(crate) fn make_module(orchestrator: Arc<Mutex<Orchestrator>>) -> ValueMap {
     use Value::{Empty, List, Map, Number};
 
     let mut result = ValueMap::new();
 
-    let player_cl = player.clone();
+    let orchestrator_cl = orchestrator.clone();
 
     result.add_fn("midi_out", {
         move |vm, args| match vm.get_args(args) {
@@ -27,19 +27,26 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
                 let quant = f64::from(quant);
 
                 match EventPattern::try_from(map) {
-                    Ok(pattern) => player_cl.lock().unwrap().schedule_pattern(pattern, quant),
+                    Ok(pattern) => {
+                        orchestrator_cl
+                            .lock()
+                            .unwrap()
+                            .schedule_patterns(vec![pattern], quant);
+                    }
                     Err(e) => return runtime_error!("{}", e),
                 }
 
                 Ok(Empty)
             }
             [List(list), Number(quant)] => {
+                let quant = f64::from(quant);
+                let mut patterns = Vec::new();
+
                 for item in list.clone().data().iter() {
                     match item {
                         Map(map) => match EventPattern::try_from(map) {
                             Ok(pattern) => {
-                                //TODO parallel patterns
-                                todo!()
+                                patterns.push(pattern);
                             }
                             Err(e) => return runtime_error!("{}", e),
                         },
@@ -52,6 +59,8 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
                     }
                 }
 
+                orchestrator_cl.lock().unwrap().schedule_patterns(patterns, quant);
+
                 Ok(Empty)
             }
             _ => runtime_error!(
@@ -61,12 +70,12 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
         }
     });
 
-    let player_cl = player.clone();
+    let orchestrator_cl = orchestrator.clone();
 
     result.add_fn("print_scales", {
         move |vm, args| match vm.get_args(args) {
             [] => {
-                player_cl
+                orchestrator_cl
                     .lock()
                     .unwrap()
                     .parameters
@@ -81,7 +90,49 @@ pub(crate) fn make_module(player: Arc<Mutex<Player>>) -> ValueMap {
 }
 
 #[derive(Default)]
-pub(crate) struct Player {
+pub(crate) struct Orchestrator {
+    host: HostCallback,
+    parameters: Arc<Parameters>,
+    players: Vec<Player>,
+}
+
+impl Orchestrator {
+    pub(crate) fn new(host: HostCallback, parameters: Arc<Parameters>) -> Self {
+        Self {
+            host,
+            parameters,
+            ..Default::default()
+        }
+    }
+
+    fn schedule_patterns(&mut self, patterns: Vec<EventPattern>, quant: f64) {
+        self.players = patterns
+            .into_iter()
+            .map(|p| match self.players.pop() {
+                Some(player) => {
+                    player.schedule_pattern(p, quant);
+                    player
+                }
+                None => {
+                    let player = Player::new(self.host.clone(), Arc::clone(&self.parameters));
+                    player.schedule_pattern(p, quant);
+                    player
+                }
+            })
+            .collect();
+    }
+
+    pub(crate) fn tick(&mut self) -> Vec<MidiEvent> {
+        self.players
+            .iter_mut()
+            .filter_map(Player::tick)
+            .flatten()
+            .collect()
+    }
+}
+
+#[derive(Default)]
+struct Player {
     host: HostCallback,
     parameters: Arc<Parameters>,
     queued_stream: RwLock<Option<ScheduledEventPattern>>,
@@ -91,7 +142,7 @@ pub(crate) struct Player {
 }
 
 impl Player {
-    pub(crate) fn new(host: HostCallback, parameters: Arc<Parameters>) -> Self {
+    fn new(host: HostCallback, parameters: Arc<Parameters>) -> Self {
         Self {
             host,
             parameters,
@@ -120,7 +171,7 @@ impl Player {
         time_info.sample_rate / beats_per_sec
     }
 
-    pub(crate) fn tick(&mut self) -> Option<Vec<MidiEvent>> {
+    fn tick(&mut self) -> Option<Vec<MidiEvent>> {
         if !self.is_playing() {
             self.wait_until = self.wait_until - self.last_position;
             return None;
@@ -143,7 +194,7 @@ impl Player {
             match stream.pattern.try_next() {
                 Ok(event) => event.map(|e| self.process_events(position, e)),
                 Err(e) => {
-                    self.parameters.append_console(&format!("{}", e));
+                    self.parameters.append_console(&format!("{}\n", e));
                     None
                 }
             }
@@ -265,7 +316,8 @@ impl EventPattern {
                     let ps_len = pitch_set.len() as f64;
                     let is_neg = pitch.is_sign_negative() as u8;
                     let oct = ((pitch + is_neg as f64) / ps_len) as i16 - is_neg as i16;
-                    let pitch = (oct.abs() as f64 * 2.0 * ps_len + pitch) as usize % pitch_set.len();
+                    let pitch =
+                        (oct.abs() as f64 * 2.0 * ps_len + pitch) as usize % pitch_set.len();
                     let oct = oct as f64 * 12.0;
                     Degree::Pitch(pitch_set[pitch] + root + oct)
                 }
@@ -621,11 +673,11 @@ pub(crate) enum EventValue {
 
 #[derive(Debug, Error)]
 enum StreamError {
-    #[error("Unexpected value type '{0}' in stream, expected type is '{1}")]
+    #[error("Unexpected value type '{0}' in stream, expected type is {1}")]
     ValueTypeError(String, String),
-    #[error("Unexpected return type '{0}' in stream, expected type is '{1}")]
+    #[error("Unexpected return type '{0}' in stream, expected type is {1}")]
     ReturnTypeError(String, String),
-    #[error("Error processing iterator: '{0}")]
+    #[error("Error processing iterator: '{0}'")]
     IteratorError(String),
     #[error("Error in stream: {0}")]
     OtherError(String),
