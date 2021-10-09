@@ -1,0 +1,62 @@
+import koto
+from test import assert, assert_eq
+from number import infinity
+
+as_iter = |value|
+  if koto.type(value) == "Iterator"
+    loop
+      next = value.next()
+      if next == ()
+        break
+      yield next
+  else
+    yield value
+
+pseq = |list, repeats|
+  while repeats > 0
+    for event in list
+      event = as_iter event
+      loop
+        next = event.next()
+        if next == ()
+          break
+        yield next
+    repeats -= 1
+
+
+export @tests =
+
+  @test as_iter: ||
+    foo = as_iter 42
+    bar = as_iter (0..=2).iter()
+
+    assert_eq foo.next(), 42
+    assert_eq foo.next(), ()
+
+    assert_eq bar.next(), 0
+    assert_eq bar.next(), 1
+    assert_eq bar.next(), 2
+    assert_eq bar.next(), ()
+
+  @test pseq: ||
+    foo = pseq (0..=2), infinity
+
+    assert_eq foo.next(), 0
+    assert_eq foo.next(), 1
+    assert_eq foo.next(), 2
+    assert_eq foo.next(), 0
+
+    foo = pseq [pseq([0,2], 2), pseq([1,3], 2)], 2
+
+    # TODO iterators are not copyable at the moment:
+    # https://github.com/koto-lang/koto/issues/90
+    # So we can't reuse/reset them
+    # for _ in (0..2)
+    assert_eq foo.next(), 0
+    assert_eq foo.next(), 2
+    assert_eq foo.next(), 0
+    assert_eq foo.next(), 2
+    assert_eq foo.next(), 1
+    assert_eq foo.next(), 3
+    assert_eq foo.next(), 1
+    assert_eq foo.next(), 3

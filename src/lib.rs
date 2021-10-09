@@ -35,6 +35,7 @@ use pattern::{make_module, Orchestrator};
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
+const KOTO_LIB_CODE: &'static str = include_str!("../koto/pattern.koto");
 
 #[derive(Default)]
 struct Kotoist {
@@ -60,6 +61,9 @@ impl Plugin for Kotoist {
             .unwrap()
             .prelude()
             .add_map("pattern", make_module(Arc::clone(&orchestrator)));
+
+        parameters.eval_code("from pattern import midi_out, print_scales");
+        parameters.eval_code(KOTO_LIB_CODE);
 
         Self {
             host,

@@ -59,6 +59,7 @@ impl Default for Parameters {
     fn default() -> Self {
         let koto = Koto::with_settings(KotoSettings {
             repl_mode: true,
+            run_tests: cfg!(debug_assertions),
             ..Default::default()
         });
 
