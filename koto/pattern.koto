@@ -154,6 +154,23 @@ pclump = |n, pattern|
       yield li
       li = []
 
+pclutch = |pattern, connected|
+  val = ()
+
+  loop
+    is_con = connected.next()
+
+    if is_con == ()
+      yield ()
+      break
+    else if is_con
+      val = pattern.next()
+      yield val
+      if val == ()
+        break
+    else
+      yield val
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -354,6 +371,12 @@ export @tests =
     iter = pclump 2, pseq([1,2,3], 1)
     expected = [[1,2], [3], ()]
     for n in (0..3)
+      assert_eq iter.next(), expected[n]
+
+  @test pclutch: ||
+    iter = pclutch pseq((0..4), 2), pseq([true, true, false], 3)
+    expected = [0, 1, 1, 2, 3, 3, 0, 1, 1, ()]
+    for n in (0..10)
       assert_eq iter.next(), expected[n]
 
   @test pseq: ||
