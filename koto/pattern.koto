@@ -21,6 +21,9 @@ rand = |val|
 rand2 = |val|
   return random.number() * val * 2 - val
 
+exprand = |lo, hi|
+  return lo * ((hi / lo).ln() * random.number()).exp()
+
 fold = |val, lo, hi|
   x = val - lo
 
@@ -195,6 +198,20 @@ pconst = |sum, pattern, tollerance|
     else
       elapsed = next_elapsed
       yield delta
+
+pexprand = |lo, hi, length|
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+
+  while length > 0
+    hi_val = hi_iter.next()
+    lo_val = lo_iter.next()
+
+    if hi_val == () or lo_val == () then break
+
+    yield exprand(lo_val, hi_val)
+
+    length -= 1
 
 pdup = |n, pattern|
   if koto.type(n) == "Iterator"
@@ -446,6 +463,34 @@ export @tests =
 
     for item in expected
       assert_eq iter.next(), item
+
+  @test pexprand: ||
+    iter = pexprand 0.0001, 1, infinity
+    expected = [
+      0.029841141583300028,
+      0.0004092767114825923,
+      0.01537708632863361,
+      0.005295334257655042,
+      0.49201282684887976,
+      0.003176125003187975,
+      0.03410423816335522,
+      0.001554408707669678,
+      0.005783709479337844,
+      0.029428891472169295,
+      0.0012716481793197704,
+      0.030318205764975875,
+      0.018032657769266016,
+      0.1613915031052206,
+      0.0008691437603582264,
+      0.0029668558888765978,
+      0.002849255012017592,
+      0.0009706185241079233,
+      0.24750964522715005,
+      0.022832025106861588
+    ]
+    random.seed(1)
+    for item in expected
+      assert_near iter.next(), item, 0.00001
 
   @test pseq: ||
     foo = pseq (0..=2), infinity
