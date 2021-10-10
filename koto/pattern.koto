@@ -322,6 +322,14 @@ phprand = |lo, hi, length|
 
     yield iter1.next().max iter2.next()
 
+pmeanrand = |lo, hi, length|
+  iter1 = pwhite lo, hi, length
+  iter2 = pwhite lo, hi, length
+  while length > 0
+    length -= 1
+
+    yield (iter1.next() + iter2.next()) * 0.5
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -746,6 +754,34 @@ export @tests =
       0.8599226673317435,
       0.8857282675143859,
       0.55865794478581
+    ]
+    random.seed(1)
+    for item in expected
+      assert_near iter.next(), item, 0.00001
+
+  @test pmeanrand: ||
+    iter = pmeanrand 0, 1, infinity
+    expected = [
+      0.38585405831053454,
+      0.48884592898116785,
+      0.6492342514646043,
+      0.4655466966224914,
+      0.5288725466562505,
+      0.4482588087403034,
+      0.6829925508664553,
+      0.3014235085290187,
+      0.3052224870501461,
+      0.7190170701247982,
+      0.3986681649435179,
+      0.5192208779395562,
+      0.6760495441862824,
+      0.21103750841351937,
+      0.6349480227645077,
+      0.650229395460678,
+      0.2187379026972412,
+      0.5983962818211135,
+      0.8040228514935415,
+      0.49588735948924273
     ]
     random.seed(1)
     for item in expected
