@@ -46,6 +46,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+
       - name: Run tests
         run: |
           cargo install koto_cli
