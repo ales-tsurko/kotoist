@@ -117,6 +117,26 @@ pbrown = |lo, hi, step, length|
     length -= 1
 
 pcauchy = |mean, spread, length|
+  mean_iter = as_iter mean
+  spread_iter = as_iter spread
+  mean_val = ()
+  spread_val = ()
+
+  while length > 0
+    ran = 0.5
+    mean_val = mean_iter.next()
+    spread_val = spread_iter.next()
+
+    if mean_val == () or spread_val == ()
+      yield ()
+      break
+
+    while ran == 0.5
+      ran = random.number()
+
+    yield ((ran * number.pi).tan() * spread_val) + mean_val
+
+    length -= 1
 
 pseq = |list, repeats|
   while repeats > 0
@@ -283,7 +303,37 @@ export @tests =
     random.seed(1)
     for n in (0..20)
       assert_near iter.next(), expected[n], 0.00001
+
+  @test pcauchy: ||
+    iter = pcauchy 0, 10, infinity
+    expected = [
+      -25.6,
+      5.2147170741223885,
+      -67.6,
+      45.38893160257427,
+      -2.5,
+      24.244271410115708,
+      -22.5,
+      13.573803034087756,
+      52.91991583580018,
+      -25.9,
+      11.790140905744481,
+      -25.2,
+      -49.1,
+      -7.2,
+      9.086266805541115,
+      22.730323458806293,
+      21.905407476147406,
+      9.798601187194997,
+      -5.2,
+      -34.6,
+    ]
+
+    random.seed(1)
     
+    for n in (0..20)
+      assert_near iter.next(), expected[n], 0.1
+
   @test pseq: ||
     foo = pseq (0..=2), infinity
 
