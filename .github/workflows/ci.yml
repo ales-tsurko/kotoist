@@ -39,3 +39,14 @@ jobs:
 
       - name: Test
         run: cargo test
+
+  test-lib:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          cargo install koto
+          koto --tests koto/pattern.koto
