@@ -15,6 +15,9 @@ as_iter = |value|
 rrand = |min, max|
   return (random.number() * (max - min)) + min
 
+rand = |val|
+  return random.number() * val
+
 rand2 = |val|
   return random.number() * val * 2 - val
 
@@ -112,6 +115,8 @@ pbrown = |lo, hi, step, length|
     yield cur
 
     length -= 1
+
+pcauchy = |mean, spread, length|
 
 pseq = |list, repeats|
   while repeats > 0
