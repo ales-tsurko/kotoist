@@ -122,6 +122,37 @@ pbrown = |lo, hi, step, length|
 
     length -= 1
 
+pgbrown = |lo, hi, step, length|
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  step_iter = as_iter step
+
+  lo_val = lo_iter.next()
+  hi_val = hi_iter.next()
+  step_val = step_iter.next()
+
+  if lo_val == () or hi_val == () or step_val == ()
+    yield ()
+    return
+
+  cur = rrand lo_val, hi_val
+
+  while length > 0
+    lo_val = lo_iter.next()
+    hi_val = hi_iter.next()
+    step_val = step_iter.next()
+
+    if lo_val == () or hi_val == () or step_val == ()
+      yield ()
+      break
+
+    next = cur * (1 + rand2(step_val))
+    cur = fold(next, lo_val, hi_val)
+
+    yield cur
+
+    length -= 1
+
 pcauchy = |mean, spread, length|
   mean_iter = as_iter mean
   spread_iter = as_iter spread
@@ -412,6 +443,34 @@ export @tests =
       0.5671430279126484,
       0.58507024957943,
       0.5621729750717894,
+    ]
+    random.seed(1)
+    for item in expected
+      assert_near iter.next(), item, 0.00001
+
+  @test pgbrown: ||
+    iter = pgbrown 0, 1, 0.2, infinity
+    expected = [
+      0.5328288166246906,
+      0.5427860046523808,
+      0.5277993237016826,
+      0.6171017249870987,
+      0.5863637391390359,
+      0.6176056889206439,
+      0.5676762970253886,
+      0.5541773219602849,
+      0.5801557085992849,
+      0.5281950473033468,
+      0.5536383873953493,
+      0.567814837579307,
+      0.6364000940185026,
+      0.5688838745299202,
+      0.5388636706051388,
+      0.5094811224164588,
+      0.4578731595458479,
+      0.5216820026069645,
+      0.5403866204075757,
+      0.5156398588321188
     ]
     random.seed(1)
     for item in expected
