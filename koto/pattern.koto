@@ -138,6 +138,22 @@ pcauchy = |mean, spread, length|
 
     length -= 1
 
+pclump = |n, pattern|
+  li = []
+
+  loop
+    next = pattern.next()
+
+    if next == ()
+      yield li
+      break
+
+    li.push next
+
+    if li.size() == n
+      yield li
+      li = []
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -333,6 +349,12 @@ export @tests =
     
     for n in (0..20)
       assert_near iter.next(), expected[n], 0.1
+
+  @test pclump: ||
+    iter = pclump 2, pseq([1,2,3], 1)
+    expected = [[1,2], [3], ()]
+    for n in (0..3)
+      assert_eq iter.next(), expected[n]
 
   @test pseq: ||
     foo = pseq (0..=2), infinity
