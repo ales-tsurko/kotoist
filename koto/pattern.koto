@@ -18,6 +18,33 @@ rrand = |min, max|
 rand2 = |val|
   return random.number() * val * 2 - val
 
+fold = |val, lo, hi|
+  x = val - lo
+
+  # avoid the divide if possible
+  if val >= hi 
+    val = hi + hi - val
+    if val >= lo
+      return val
+  else if val < lo
+    val = lo + lo - val
+    if val < hi
+      return val
+  else
+    return val
+
+  if hi == lo
+    return lo
+
+  # ok do the divide
+  range = hi - lo
+  range2 = range + range
+  c = x - range2 * (x / range2).floor()
+  if c >= range
+    c = range2 - c
+
+  return c + lo
+
 pbeta = |lo, hi, prob1, prob2, length|
   lo_iter = as_iter lo
   hi_iter = as_iter hi
@@ -79,6 +106,10 @@ pbrown = |lo, hi, step, length|
       yield ()
       break
 
+    next = cur + rand2(step_val)
+    cur = fold(next, lo_val, hi_val)
+
+    yield cur
 
     length -= 1
 
@@ -163,6 +194,33 @@ export @tests =
     for n in (0..20)
       assert_near rand2(5), expected[n], 0.1
 
+  @test fold: ||
+    expected = [
+      2.812961416985978,
+      2.5300425831966695,
+      2.467185131369483,
+      2.6902665517461255,
+      2.229941062594593,
+      2.7547439666974936,
+      2.667979118751404,
+      2.021086948798768,
+      2.5944838253701086,
+      2.8280652415048806,
+      2.2390825654974087,
+      2.7957412596965234,
+      2.6401493513957837,
+      2.9802983340666778,
+      2.6522709582841237,
+      2.680741128864499,
+      2.6368283022455525,
+      2.5323785612426306,
+      2.5160196808431152,
+      2.8963610833390785,
+    ]
+    random.seed(1)
+    for n in (0..20)
+      assert_near fold(rand2(5), 2, 3), expected[n], 0.000001
+
   @test pbeta: ||
     iter = pbeta 0, 1, 0.1, 0.1, infinity
     expected = [
@@ -192,6 +250,34 @@ export @tests =
 
     for n in (0..20)
       assert_near iter.next(), expected[n], 0.000001
+
+  @test pbrown: ||
+    iter = pbrown 0, 1, 0.1, infinity
+    expected = [
+      0.5493047099653355,
+      0.5586484125927252,
+      0.5448430815578027,
+      0.6294419028096946,
+      0.6045367821436445,
+      0.6311771997686164,
+      0.5907554607926411,
+      0.5788657842852389,
+      0.6023044794551413,
+      0.5575228281451932,
+      0.5816080029512627,
+      0.5944109899791784,
+      0.6548050232978448,
+      0.6017596041321623,
+      0.5753744267094523,
+      0.5481109927543634,
+      0.49746342152951073,
+      0.5671430279126484,
+      0.58507024957943,
+      0.5621729750717894,
+    ]
+    random.seed(1)
+    for n in (0..20)
+      assert_near iter.next(), expected[n], 0.00001
     
   @test pseq: ||
     foo = pseq (0..=2), infinity
