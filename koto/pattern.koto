@@ -292,6 +292,20 @@ pgeom = |start, grow, length|
     counter += 1
     yield outval
 
+pwhite = |lo, hi, length|
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+
+  while length > 0
+    hi_val = hi_iter.next()
+    lo_val = lo_iter.next()
+
+    if hi_val == () or lo_val == () then break
+
+    length -= 1
+
+    yield rrand lo_val, hi_val
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -636,6 +650,34 @@ export @tests =
     ]
     for item in expected
       assert_eq iter.next(), item
+
+  @test pwhite: ||
+    iter = pwhite 0, 1, infinity
+    expected = [
+      0.6187038583014022,
+      0.1530042583196669,
+      0.5467185131369483,
+      0.4309733448253874,
+      0.9229941062594592,
+      0.37547439666974936,
+      0.6332020881248596,
+      0.2978913051201232,
+      0.4405516174629891,
+      0.6171934758495119,
+      0.2760917434502591,
+      0.6204258740303477,
+      0.5640149351395783,
+      0.8019701665933322,
+      0.23477290417158758,
+      0.36807411288644987,
+      0.3636828302245553,
+      0.24676214387573692,
+      0.8483980319156884,
+      0.5896361083339079
+    ]
+    random.seed(1)
+    for item in expected
+      assert_near iter.next(), item, 0.0001
 
   @test pseq: ||
     foo = pseq (0..=2), infinity
