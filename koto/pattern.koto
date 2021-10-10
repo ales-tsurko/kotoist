@@ -12,6 +12,9 @@ as_iter = |value|
     loop
       yield value
 
+rrand = |min, max|
+  return (random.number() * (max - min)) + min
+
 pbeta = |lo, hi, prob1, prob2, length|
   lo_iter = as_iter lo
   hi_iter = as_iter hi
@@ -49,6 +52,21 @@ pbeta = |lo, hi, prob1, prob2, length|
 
     length -= 1
 
+pbrown = |lo, hi, step, length|
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  step_iter = as_iter step
+
+  lo_val = lo_iter.next()
+  hi_val = hi_iter.next()
+  step_val = step_iter.next()
+
+  if lo_val == () or hi_val == () or step_val == ()
+    yield ()
+    return
+
+  cur = rrand lo_val, hi_val
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -75,6 +93,33 @@ export @tests =
     assert_eq bar.next(), 1
     assert_eq bar.next(), 2
     assert_eq bar.next(), ()
+
+  @test rrand: ||
+    expected = [
+      -1.2,
+      3.469957416803331,
+      -0.5,
+      0.6902665517461255,
+      -4.2,
+      1.2452560333025064,
+      -1.3,
+      2.021086948798768,
+      0.5944838253701086,
+      -1.2,
+      2.2390825654974087,
+      -1.2,
+      -0.6,
+      -3.0,
+      2.652270958284124,
+      1.319258871135501,
+      1.3631716977544475,
+      2.5323785612426306,
+      -3.5,
+      -0.9
+    ]
+    random.seed 1
+    for n in (0..20)
+      assert_near expected[n], rrand(5, -5), 0.1
 
   @test pbeta: ||
     iter = pbeta 0, 1, 0.1, 0.1, infinity
@@ -104,7 +149,7 @@ export @tests =
     random.seed(1)
 
     for n in (0..20)
-      assert_near iter.next(), expected[n], 0.000000000000001
+      assert_near iter.next(), expected[n], 0.000001
     
   @test pseq: ||
     foo = pseq (0..=2), infinity
