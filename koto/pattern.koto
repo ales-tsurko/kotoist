@@ -277,6 +277,21 @@ pgauss = |mean, dev, length|
 
     length -= 1
 
+pgeom = |start, grow, length|
+  grow_iter = as_iter grow
+  outval = ()
+  counter = 0
+
+  while counter < length
+    grow_val = grow_iter.next()
+
+    if grow_val == () then break
+
+    outval = start
+    start = start * grow_val
+    counter += 1
+    yield outval
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -594,6 +609,33 @@ export @tests =
     random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.1
+
+  @test pgeom: ||
+    iter = pgeom 1, 1.1, infinity
+    expected = [
+      1,
+      1.1,
+      1.2100000000000002,
+      1.3310000000000004,
+      1.4641000000000006,
+      1.6105100000000008,
+      1.771561000000001,
+      1.9487171000000014,
+      2.1435888100000016,
+      2.357947691000002,
+      2.5937424601000023,
+      2.853116706110003,
+      3.1384283767210035,
+      3.4522712143931042,
+      3.797498335832415,
+      4.177248169415656,
+      4.594972986357222,
+      5.054470284992944,
+      5.559917313492239,
+      6.115909044841463
+    ]
+    for item in expected
+      assert_eq iter.next(), item
 
   @test pseq: ||
     foo = pseq (0..=2), infinity
