@@ -1,26 +1,64 @@
 import koto
-from test import assert, assert_eq
+from test import assert, assert_eq, assert_near
 from number import infinity
 
 as_iter = |value|
   if koto.type(value) == "Iterator"
     loop
       next = value.next()
-      if next == ()
-        break
+      if next == () then break
       yield next
   else
-    yield value
+    loop
+      yield value
+
+pbeta = |lo, hi, prob1, prob2, length|
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  prob1_iter = as_iter prob1
+  prob2_iter = as_iter prob2
+  lo_val = ()
+  hi_val = ()
+
+  while length > 0
+    rprob1 = prob1_iter.next()
+    rprob2 = prob2_iter.next()
+
+    if rprob1 == () or rprob2 == ()
+      yield ()
+      break
+
+    rprob1 = rprob1.recip()
+    rprob2 = rprob2.recip()
+
+    lo_val = lo_iter.next()
+    hi_val = hi_iter.next()
+
+    if lo_val == () or hi_val == ()
+      yield ()
+      break
+
+    sum = 2
+    temp = 0
+
+    while sum > 1
+      temp = random.number().pow(rprob1)
+      sum = temp + random.number().pow(rprob2)
+
+    yield ((temp / sum) * (hi_val - lo_val)) + lo_val
+
+    length -= 1
 
 pseq = |list, repeats|
   while repeats > 0
     for event in list
-      event = as_iter event
-      loop
-        next = event.next()
-        if next == ()
-          break
-        yield next
+      if koto.type(event) == "Iterator"
+        loop
+          next = event.next()
+          if next == () then break
+          yield next
+      else
+        yield event
     repeats -= 1
 
 
@@ -30,14 +68,44 @@ export @tests =
     foo = as_iter 42
     bar = as_iter (0..=2).iter()
 
-    assert_eq foo.next(), 42
-    assert_eq foo.next(), ()
+    for _ in (0..10)
+      assert_eq foo.next(), 42
 
     assert_eq bar.next(), 0
     assert_eq bar.next(), 1
     assert_eq bar.next(), 2
     assert_eq bar.next(), ()
 
+  @test pbeta: ||
+    iter = pbeta 0, 1, 0.1, 0.1, infinity
+    expected = [
+      0.9999991445264916,
+      0.9152024196110354,
+      0.999875903336608,
+      0.9994692080756311,
+      0.03319654811950952,
+      0.0003044408621467811,
+      0.028751099344361247,
+      0.011023335524190322,
+      0.9797386852643469,
+      0.9743803780361755,
+      0.3407028163560437,
+      0.9999999999999301,
+      0.7631398280331377,
+      0.9946581942463375,
+      0.9816463243418938,
+      0.25330909537521223,
+      0.9999999221592342,
+      0.9999148879416475,
+      0.8848777651792713,
+      0.9272571307795654
+    ]
+
+    random.seed(1)
+
+    for n in (0..20)
+      assert_near iter.next(), expected[n], 0.000000000000001
+    
   @test pseq: ||
     foo = pseq (0..=2), infinity
 
