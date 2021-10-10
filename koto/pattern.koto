@@ -306,6 +306,14 @@ pwhite = |lo, hi, length|
 
     yield rrand lo_val, hi_val
 
+plprand = |lo, hi, length|
+  iter1 = pwhite lo, hi, length
+  iter2 = pwhite lo, hi, length
+  while length > 0
+    length -= 1
+
+    yield iter1.next().min iter2.next()
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -678,6 +686,34 @@ export @tests =
     random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.0001
+
+  @test plprand: ||
+    iter = plprand 0, 1, infinity
+    expected = [
+      0.1530042583196669,
+      0.4309733448253874,
+      0.37547439666974936,
+      0.2978913051201232,
+      0.4405516174629891,
+      0.2760917434502591,
+      0.5640149351395783,
+      0.23477290417158758,
+      0.24676214387573692,
+      0.5896361083339079,
+      0.3855136274617973,
+      0.04790208269762819,
+      0.6365466664018155,
+      0.15710685061085117,
+      0.5102535624318508,
+      0.6151173564933541,
+      0.0712616454275049,
+      0.33686989631048336,
+      0.722317435472697,
+      0.43311677419267547
+    ]
+    random.seed(1)
+    for item in expected
+      assert_near iter.next(), item, 0.00001
 
   @test pseq: ||
     foo = pseq (0..=2), infinity
