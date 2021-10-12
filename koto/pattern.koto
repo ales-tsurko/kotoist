@@ -345,9 +345,23 @@ pindex = |list_pat, index_pat, repeats|
       index = index_iter.next()
       if index == () then break
       item_count += 1
-      item = list[index%list.size()]
-      yield item
+      item = as_iter list[index%list.size()]
+      yield item.next()
     if item_count == 0 then break
+    repeats -= 1
+
+pfsm = |list, repeats|
+  if list.is_empty() then return
+  item = ()
+  index = 0
+  max_state = ((list.size() - 1) / 2).floor() - 1
+  while repeats > 0
+    index = 0
+    loop
+      index = (random.pick list[index]).clamp(0, max_state) * 2 + 2
+      item = as_iter list[index - 1]
+      if item == () then break
+      yield item.next()
     repeats -= 1
 
 pseq = |list, repeats|
@@ -364,6 +378,9 @@ pseq = |list, repeats|
 
 
 export @tests =
+
+  @pre_test: ||
+    random.seed 1
 
   @test as_iter: ||
     foo = as_iter 42
@@ -400,7 +417,6 @@ export @tests =
       -3.5,
       -0.9
     ]
-    random.seed 1
     for n in 0..20
       assert_near expected[n], rrand(5, -5), 0.1
 
@@ -427,7 +443,6 @@ export @tests =
       3.4839803191568848,
       0.8963610833390785
     ]
-    random.seed 1
     for item in expected
       assert_near rand2(5), item, 0.1
 
@@ -454,7 +469,6 @@ export @tests =
       2.5160196808431152,
       2.8963610833390785,
     ]
-    random.seed(1)
     for item in expected
       assert_near fold(rand2(5), 2, 3), item, 0.000001
 
@@ -488,8 +502,6 @@ export @tests =
       0.9272571307795654
     ]
 
-    random.seed(1)
-
     for item in expected
       assert_near iter.next(), item, 0.000001
 
@@ -517,7 +529,6 @@ export @tests =
       0.58507024957943,
       0.5621729750717894,
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -545,7 +556,6 @@ export @tests =
       0.5403866204075757,
       0.5156398588321188
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -574,8 +584,6 @@ export @tests =
       -34.6,
     ]
 
-    random.seed(1)
-    
     for item in expected
       assert_near iter.next(), item, 0.1
 
@@ -636,7 +644,6 @@ export @tests =
       0.24750964522715005,
       0.022832025106861588
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -664,7 +671,6 @@ export @tests =
       -48.5,
       44.024650157204086
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.1
 
@@ -719,7 +725,6 @@ export @tests =
       0.8483980319156884,
       0.5896361083339079
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.0001
 
@@ -747,7 +752,6 @@ export @tests =
       0.722317435472697,
       0.43311677419267547
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -775,7 +779,6 @@ export @tests =
       0.8857282675143859,
       0.55865794478581
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -803,7 +806,6 @@ export @tests =
       0.8040228514935415,
       0.49588735948924273
     ]
-    random.seed(1)
     for item in expected
       assert_near iter.next(), item, 0.00001
 
@@ -813,6 +815,18 @@ export @tests =
       pseq([0, 0, 2, 0, 4, 6, 7], infinity), 
       infinity)
     expected = [7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test pfsm: ||
+    iter = pfsm([
+        [0,1],
+        67, [0, 0, 3],
+        72, [2],
+        73, [0, 2],
+        pseq([74, 75, 76, 77], 1), [2, 3, 3],
+        (), ()], infinity)
+    expected = [72,73,73,73,73,73,73,67,67,67,67,74,75,76,73,73,73,67,77,()]
     for item in expected
       assert_eq iter.next(), item
 
