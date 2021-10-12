@@ -330,6 +330,26 @@ pmeanrand = |lo, hi, length|
 
     yield (iter1.next() + iter2.next()) * 0.5
 
+pindex = |list_pat, index_pat, repeats|
+  index_iter = ()
+  index = ()
+  item = ()
+  item_count = ()
+  list_iter = as_iter list_pat
+  while repeats > 0
+    list = list_iter.next()
+    if list == () then break
+    index_iter = as_iter index_pat
+    item_count = 0
+    loop
+      index = index_iter.next()
+      if index == () then break
+      item_count += 1
+      item = list[index%list.size()]
+      yield item
+    if item_count == 0 then break
+    repeats -= 1
+
 pseq = |list, repeats|
   while repeats > 0
     for event in list
@@ -349,7 +369,7 @@ export @tests =
     foo = as_iter 42
     bar = as_iter (0..=2).iter()
 
-    for _ in (0..10)
+    for _ in 0..10
       assert_eq foo.next(), 42
 
     assert_eq bar.next(), 0
@@ -381,7 +401,7 @@ export @tests =
       -0.9
     ]
     random.seed 1
-    for n in (0..20)
+    for n in 0..20
       assert_near expected[n], rrand(5, -5), 0.1
 
   @test rand2: ||
@@ -787,6 +807,15 @@ export @tests =
     for item in expected
       assert_near iter.next(), item, 0.00001
 
+  @test pindex: ||
+    iter = pindex(
+      [7, 13, 12, 2, 2, 2, 5], 
+      pseq([0, 0, 2, 0, 4, 6, 7], infinity), 
+      infinity)
+    expected = [7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5]
+    for item in expected
+      assert_eq iter.next(), item
+
   @test pseq: ||
     foo = pseq (0..=2), infinity
 
@@ -800,7 +829,7 @@ export @tests =
     # TODO iterators are not copyable at the moment:
     # https://github.com/koto-lang/koto/issues/90
     # So we can't reuse/reset them
-    # for _ in (0..2)
+    # for _ in 0..2
     assert_eq foo.next(), 0
     assert_eq foo.next(), 2
     assert_eq foo.next(), 0
