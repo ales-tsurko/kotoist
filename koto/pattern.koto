@@ -364,6 +364,23 @@ pfsm = |list, repeats|
       yield item.next()
     repeats -= 1
 
+place = |list, repeats, offset|
+  offset_iter = as_iter offset
+  # we don't use repeats here as it can be infinity, which won't work for
+  # indexing
+  repeat_num = 0 
+  while repeats > 0
+    offset = offset_iter.next()
+    if offset == () then break
+    for i in 0..list.size()
+      item = list[(i + offset)%list.size()]
+      if koto.type(item) == "List"
+        item = item[repeat_num%item.size()]
+      item = as_iter item
+      yield item.next()
+    repeat_num += 1
+    repeats -= 1
+
 pseq = |list, repeats, offset|
   offset = as_iter offset
   while repeats > 0
@@ -830,6 +847,17 @@ export @tests =
         pseq([74, 75, 76, 77], 1, 0), [2, 3, 3],
         (), ()], infinity)
     expected = [72,73,73,73,73,73,73,67,67,67,67,74,75,76,73,73,73,67,77,()]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test place: ||
+    iter = place [1, [2, 5], [3, 6]], infinity, 0
+    expected = [1,2,3,1,5,6,1,2]
+    for item in expected
+      assert_eq iter.next(), item
+
+    iter = place(
+      [1, pseq([2, 5], infinity, 0), pseq([3, 6], infinity, 0)], infinity, 0)
     for item in expected
       assert_eq iter.next(), item
 
