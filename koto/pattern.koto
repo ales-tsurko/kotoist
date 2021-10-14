@@ -345,8 +345,14 @@ pindex = |list_pat, index_pat, repeats|
       index = index_iter.next()
       if index == () then break
       item_count += 1
-      item = as_iter list[index%list.size()]
-      yield item.next()
+      item = list[index%list.size()]
+      if koto.type(item) == "Iterator"
+        loop
+          next = item.next()
+          if next == () then break
+          yield next
+      else
+        yield item
     if item_count == 0 then break
     repeats -= 1
 
