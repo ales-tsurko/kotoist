@@ -502,6 +502,37 @@ pshuf = |list, repeats|
         yield item
     repeats -= 1
 
+pslide = |list, repeats, len, step, start, wrap_at_end|
+  pos = start
+  step_iter = as_iter step
+  length_iter = as_iter len
+  while repeats > 0
+    length_val = length_iter.next()
+    if length_val == () then return
+    if wrap_at_end
+      for n in 0..length_val
+        item = list[(pos + n)%list.size()]
+        if koto.type(item) == "Iterator"
+          next = item.next()
+          if next == () then break
+          yield next
+        else
+          yield item
+    else
+      for n in 0..length_val
+        item = list.get(pos + n)
+        if item == () then return
+        if koto.type(item) == "Iterator"
+          next = item.next()
+          if next == () then break
+          yield next
+        else
+          yield item
+    step_val = step_iter.next()
+    if step_val == () then return
+    pos += step_val
+    repeats -= 1
+
 
 export @tests =
 
@@ -1058,5 +1089,11 @@ export @tests =
   @test pshuf: ||
     iter = pshuf (1..5).to_list(), 3
     expected = [3,1,4,2,3,1,4,2,3,1,4,2,()]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test pslide: ||
+    iter = pslide [1, 2, 3, 4, 5], infinity, 3, 1, 0, true
+    expected = [1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 1, 5, 1, 2, 1, 2, 3, 2, 3]
     for item in expected
       assert_eq iter.next(), item
