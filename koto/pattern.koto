@@ -407,6 +407,19 @@ ppoisson = |mean, length|
     yield inc
     length -= 1
 
+prand = |list, repeats|
+  while repeats > 0
+    item = random.pick list
+    if item == () then break
+    if koto.type(item) == "Iterator"
+      loop
+        next = item.next()
+        if next == () then break
+        yield next
+    else
+      yield item
+    repeats -= 1
+
 pseq = |list, repeats, offset|
   offset = as_iter offset
   while repeats > 0
@@ -895,6 +908,20 @@ export @tests =
     expected = [12,10,11,10,11,8,9,10,7,10,11,10,9,14,11,8,9,8,12,6]
     for item in expected
       assert_eq iter.next(), item
+
+  @test prand: ||
+    # FIXME will hang, because we can't copy iterators from generators
+    # iter = prand [
+      # pseq([0,1], 1, 0), 
+      # pseq([2,3], 1, 0), 
+      # pseq([4,5], 1, 0)
+    # ], infinity
+
+    iter = prand (0..10).to_list(), infinity
+    expected = [6,1,5,4,9,6,4,6,6,8,2,2,8,4,0,7,6,1,7,5]
+    for item in expected
+      assert_eq iter.next(), item
+
 
   @test pseq: ||
     foo = pseq [0,1,2], infinity, 0
