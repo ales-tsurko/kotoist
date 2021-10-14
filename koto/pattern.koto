@@ -420,6 +420,19 @@ prand = |list, repeats|
       yield item
     repeats -= 1
 
+prorate = |proportion, pattern|
+  iter = as_iter pattern
+  prop = as_iter proportion
+  loop
+    val = iter.next()
+    c = prop.next()
+    if val == () or c == () then break
+    if koto.type(c) == "List"
+      for el in c
+        yield el * val
+    yield c * val
+    yield (1 - c) * val
+
 pseq = |list, repeats, offset|
   offset = as_iter offset
   while repeats > 0
@@ -922,6 +935,16 @@ export @tests =
     for item in expected
       assert_eq iter.next(), item
 
+  @test prorate: ||
+    iter = prorate pseq([0.35, 0.5, 0.8], 1, 0), 1
+    expected = [0.35, 0.65, 0.5, 0.5, 0.8, 0.19999999999999996]
+    for item in expected
+      assert_near iter.next(), item, 0.001
+
+    iter = prorate pseq([0.35, 0.5, 0.8], 1, 0), prand([20, 1], infinity)
+    expected = [0.35, 0.65, 10.0, 10.0, 0.8, 0.19999999999999996]
+    for item in expected
+      assert_near iter.next(), item, 0.001
 
   @test pseq: ||
     foo = pseq [0,1,2], infinity, 0
