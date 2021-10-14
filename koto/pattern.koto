@@ -468,6 +468,20 @@ pser = |list, repeats, offset|
 
     repeats -= 1
 
+pseries = |start, step, length|
+  cur = as_iter start
+  cur = cur.next()
+  len = as_iter length
+  len = len.next()
+  step_iter = as_iter step
+  while len > 0
+    step_val = step_iter.next()
+    if step_val == () then break
+    outval = cur
+    cur += step_val
+    len -= 1
+    yield outval
+
 
 export @tests =
 
@@ -986,5 +1000,32 @@ export @tests =
   @test pser: ||
     iter = pser [1, 2, 3], 5, 0
     expected = [1, 2, 3, 1, 2, ()]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test pseries: ||
+    iter = pseries 300, 20, 20
+    expected = [
+      300,
+      320,
+      340,
+      360,
+      380,
+      400,
+      420,
+      440,
+      460,
+      480,
+      500,
+      520,
+      540,
+      560,
+      580,
+      600,
+      620,
+      640,
+      660,
+      680
+    ]
     for item in expected
       assert_eq iter.next(), item
