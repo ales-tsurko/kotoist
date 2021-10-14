@@ -393,6 +393,20 @@ place = |list, repeats, offset|
     repeat_num += 1
     repeats -= 1
 
+ppoisson = |mean, length|
+  mean_iter = as_iter mean
+  while length > 0
+    mean_val = mean_iter.next()
+    if mean_val == () then break
+    inc = 0
+    test = random.number()
+    temp = (-1 * mean_val).exp()
+    while test > temp
+      inc += 1
+      test *= random.number()
+    yield inc
+    length -= 1
+
 pseq = |list, repeats, offset|
   offset = as_iter offset
   while repeats > 0
@@ -873,6 +887,12 @@ export @tests =
 
     iter = place(
       [1, pseq([2, 5], infinity, 0), pseq([3, 6], infinity, 0)], infinity, 0)
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test ppoisson: ||
+    iter = ppoisson 10, infinity
+    expected = [12,10,11,10,11,8,9,10,7,10,11,10,9,14,11,8,9,8,12,6]
     for item in expected
       assert_eq iter.next(), item
 
