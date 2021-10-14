@@ -549,6 +549,20 @@ psubdivide = |n, pattern|
     dur = durs.next()
     subdivision = subdivisions.next()
 
+pswitch = |list, which|
+  index_iter = as_iter which
+  index = index_iter.next()
+  while index != ()
+    item = list[index.floor()%list.size()]
+    if koto.type(item) == "Iterator"
+      loop
+        next = item.next()
+        if next == () then break
+        yield next
+    else
+      yield item
+    index = index_iter.next()
+
 
 export @tests =
 
@@ -1143,3 +1157,13 @@ export @tests =
     ]
     for item in expected
       assert_near iter.next(), item, 0.00001
+
+  @test pswitch: ||
+    # FIXME because koto can't copy generator's iterator now, it'll continuously
+    # return 800 at the end
+    a = pseq [1, 2, 3], 2, 0
+    b = pseq [65, 76], 1, 0
+    iter = pswitch [a, b, 800], pseq([2, 2, 0, 1], infinity, 0)
+    expected = [800,800,1,2,3,1,2,3,65,76,800,800]
+    for item in expected
+      assert_eq iter.next(), item
