@@ -61,6 +61,9 @@ scramble_list = |list|
     index = (list.size() * random.number()).floor()
     result.push(list.remove(index))
 
+sign = |number|
+  if number >= 0 then 1 else -1
+
 pbeta = |lo, hi, prob1, prob2, length|
   lo_iter = as_iter lo
   hi_iter = as_iter hi
@@ -562,6 +565,46 @@ pswitch = |list, which|
     else
       yield item
     index = index_iter.next()
+
+ptuple = |list, repeats|
+  while repeats > 0
+    saw_nil = false
+    streams = list.iter().each(|i| as_iter i).to_list()
+    while not saw_nil
+      tuple = []
+      for stream in streams
+        outval = stream.next()
+        if outval == ()
+          saw_nil = true
+          break
+        tuple.push outval
+      yield tuple
+    repeats -= 1
+
+pwalk = |list, step_pattern, direction_pattern, start_pos|
+  index = as_iter(start_pos).next()
+  step_iter = as_iter step_pattern
+  direction_iter = as_iter direction_pattern
+  direction = direction_iter.next()
+  if direction == () then direction = 1
+  step = step_iter.next()
+  while step != ()
+    item = list[index]
+    if item == () then break
+    if koto.type(item) == "Iterator"
+      loop
+        next = item.next()
+        if next == () then break
+        yield next
+    else
+      yield item
+    step *= direction
+    if (index + step) < 0 or (index + step) >= list.size()
+      direction = direction_pattern.next()
+      if direction == () then direction = 1
+      step = step.abs() * sign(direction)
+    index = (index + step) % list.size()
+    step = step_iter.next()
 
 
 export @tests =
@@ -1165,5 +1208,24 @@ export @tests =
     b = pseq [65, 76], 1, 0
     iter = pswitch [a, b, 800], pseq([2, 2, 0, 1], infinity, 0)
     expected = [800,800,1,2,3,1,2,3,65,76,800,800]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test ptuple: ||
+    # FIXME don't work because of the generator's iterator copyability
+    a = pseq [1, 2, 3], infinity, 0
+    b = pseq [65, 76], infinity, 0
+    iter = ptuple [a, a, b], infinity
+    # for _ in 0..8
+      # io.print iter.next()
+
+  @test pwalk: ||
+    iter = pwalk(
+      [1, 2, 3, 4, 5, 6, 7], 
+      pseq([1], infinity, 0), 
+      pseq([1, -1], infinity, 0), 
+      0
+    )
+    expected = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 2, 3, 4, 5, 6, 7, 6]
     for item in expected
       assert_eq iter.next(), item
