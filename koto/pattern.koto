@@ -450,6 +450,24 @@ pseq = |list, repeats, offset|
         yield event
     repeats -= 1
 
+pser = |list, repeats, offset|
+  offset = as_iter offset
+  n = 0 # we use it, because repeats can be infinity
+  while repeats > 0
+    offset_next = offset.next()
+    if offset_next == () then break
+    item = list[(offset_next + n)%list.size()]
+    n += 1
+    if koto.type(item) == "Iterator"
+      loop
+        next = item.next()
+        if next == () then break
+        yield next
+    else
+      yield item
+
+    repeats -= 1
+
 
 export @tests =
 
@@ -964,3 +982,9 @@ export @tests =
     expected = [0,1,2,1,2,0,1,2,0,()]
     for item in expected
       assert_eq foo.next(), item
+
+  @test pser: ||
+    iter = pser [1, 2, 3], 5, 0
+    expected = [1, 2, 3, 1, 2, ()]
+    for item in expected
+      assert_eq iter.next(), item
