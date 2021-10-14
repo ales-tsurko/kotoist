@@ -489,6 +489,19 @@ pseries = |start, step, length|
     len -= 1
     yield outval
 
+pshuf = |list, repeats|
+  list = scramble_list list
+  while repeats > 0
+    for item in list
+      if koto.type(item) == "Iterator"
+        loop
+          next = item.next()
+          if next == () then break
+          yield next
+      else
+        yield item
+    repeats -= 1
+
 
 export @tests =
 
@@ -1039,5 +1052,11 @@ export @tests =
       660,
       680
     ]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test pshuf: ||
+    iter = pshuf (1..5).to_list(), 3
+    expected = [3,1,4,2,3,1,4,2,3,1,4,2,()]
     for item in expected
       assert_eq iter.next(), item
