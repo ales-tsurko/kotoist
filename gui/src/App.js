@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import AceEditor from "react-ace";
+import Editor from "@monaco-editor/react";
 import { FaHammer, FaBroom } from "react-icons/fa";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/snippets/python";
 
 function App() {
   const [code, setCode] = useState("");
-  const [selection, setSelection] = useState("");
   const [consoleOut, setConsoleOut] = useState("console output");
   const didMountRef = useRef(false);
+  const editorRef = useRef(null);
 
   useEffect(() => {
     if (didMountRef.current) {
@@ -23,14 +21,13 @@ function App() {
     }
   }, [consoleOut]);
 
+  const editorDidMount = (editor) => {
+    editorRef.current = editor;
+  };
+
   const onChange = (newValue) => {
     setCode(newValue);
     window.external.invoke("SEND_CODE " + newValue);
-  };
-
-  const onSelectionChange = (newValue) => {
-    const selectedText = newValue.doc.getTextRange(newValue.getRange());
-    setSelection(selectedText);
   };
 
   const onClearButtonClick = () => {
@@ -39,6 +36,9 @@ function App() {
   };
 
   const onBuildButtonClick = () => {
+    const selection = editorRef.current
+      .getModel()
+      .getValueInRange(editorRef.current.getSelection());
     const block = selection.length > 0 ? selection : code;
     window.external.invoke("EVAL_CODE " + block);
     // setConsoleOut(result);
@@ -46,18 +46,13 @@ function App() {
 
   return (
     <React.Fragment>
-      <AceEditor
-        mode="javascript"
+      <Editor
         width="100%"
         height="330px"
+        defaultLanguage="coffeescript"
         onChange={onChange}
         value={code}
-        onSelectionChange={onSelectionChange}
-        focus={true}
-        enableBasicAutocompletion={true}
-        enableLiveAutocompletion={true}
-        enableSnippets={true}
-        editorProps={{ $blockScrolling: true }}
+        onMount={editorDidMount}
       />
       <Toolbar onClear={onClearButtonClick} onBuild={onBuildButtonClick} />
       <Console text={consoleOut} />
