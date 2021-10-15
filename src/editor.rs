@@ -9,7 +9,7 @@ use self::command::{make_dispatcher, Command};
 use crate::parameters::Parameters;
 
 const HTML: &'static str = include_str!("../gui/build/index.html");
-const EDITOR_SIZE: (i32, i32) = (640, 480);
+const EDITOR_SIZE: (i32, i32) = (650, 480);
 
 pub(crate) struct KotoistEditor {
     gui: Arc<RwLock<PluginGui>>,

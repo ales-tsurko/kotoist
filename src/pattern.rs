@@ -79,7 +79,7 @@ pub(crate) fn make_module(orchestrator: Arc<Mutex<Orchestrator>>) -> ValueMap {
                     .lock()
                     .unwrap()
                     .parameters
-                    .append_console(&Scale::list());
+                    .post_stdout(&Scale::list());
                 Ok(Empty)
             }
             _ => runtime_error!("pattern.print_scales: doesn't expect any arguments"),
@@ -194,7 +194,7 @@ impl Player {
             match stream.pattern.try_next() {
                 Ok(event) => event.map(|e| self.process_events(position, e)),
                 Err(e) => {
-                    self.parameters.append_console(&format!("{}\n", e));
+                    self.parameters.post_stderr(&format!("{}\n", e));
                     None
                 }
             }

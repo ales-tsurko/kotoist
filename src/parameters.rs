@@ -41,11 +41,19 @@ impl Parameters {
         let mut koto = self.koto.write().unwrap();
         match koto.compile(code) {
             Ok(_) => match koto.run() {
-                Ok(result) => self.append_console(&format!("{}\n", result)),
-                Err(err) => self.append_console(&format!("Runtime error: {}\n", err)),
+                Ok(result) => self.post_stdout(&format!("{}\n", result)),
+                Err(err) => self.post_stderr(&format!("Runtime error: {}\n", err)),
             },
-            Err(err) => self.append_console(&format!("Compiler error: {}\n", err)),
+            Err(err) => self.post_stderr(&format!("Compiler error: {}\n", err)),
         }
+    }
+
+    pub(crate) fn post_stderr(&self, out: &str) {
+        self.append_console(&format!("<span class=\"error\">{}</span>", out));
+    }
+
+    pub(crate) fn post_stdout(&self, out: &str) {
+        self.append_console(&format!("<span class=\"ok\">{}</span>", out));
     }
 
     pub(crate) fn append_console(&self, out: &str) {

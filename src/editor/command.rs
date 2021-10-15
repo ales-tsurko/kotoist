@@ -19,6 +19,8 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::GetCode => on_get_code(&parameters),
             Command::EvalCode => on_eval_code(message, &parameters),
             Command::SendConsoleOut => on_send_console_out(message, &parameters),
+            Command::PostStderr => on_post_stderr(message, &parameters),
+            Command::PostStdout => on_post_stdout(message, &parameters),
             Command::GetConsoleOut => on_get_console_out(&parameters),
             Command::Unknown => String::new(),
         }
@@ -50,6 +52,20 @@ fn on_send_console_out(message: String, parameters: &Parameters) -> String {
     String::new()
 }
 
+fn on_post_stderr(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::PostStderr.to_string();
+    let out = &message[command_str.len() + 1..];
+    parameters.post_stderr(out);
+    String::new()
+}
+
+fn on_post_stdout(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::PostStdout.to_string();
+    let out = &message[command_str.len() + 1..];
+    parameters.post_stdout(out);
+    String::new()
+}
+
 fn on_get_console_out(parameters: &Parameters) -> String {
     parameters.console_out()
 }
@@ -61,6 +77,8 @@ pub(crate) enum Command {
     EvalCode,
     SendConsoleOut,
     GetConsoleOut,
+    PostStderr,
+    PostStdout,
     Unknown,
 }
 
@@ -87,6 +105,8 @@ impl From<&str> for Command {
             "EVAL_CODE" => Self::EvalCode,
             "SEND_CONSOLE_OUT" => Self::SendConsoleOut,
             "GET_CONSOLE_OUT" => Self::GetConsoleOut,
+            "POST_STDERR" => Self::PostStderr,
+            "POST_STDOUT" => Self::PostStdout,
             _ => Self::Unknown,
         }
     }
@@ -100,6 +120,8 @@ impl ToString for Command {
             Self::EvalCode => "EVAL_CODE".to_string(),
             Self::SendConsoleOut => "SEND_CONSOLE_OUT".to_string(),
             Self::GetConsoleOut => "GET_CONSOLE_OUT".to_string(),
+            Self::PostStderr => "POST_STDERR".to_string(),
+            Self::PostStdout => "POST_STDOUT".to_string(),
             Self::Unknown => String::new(),
         }
     }

@@ -53,6 +53,7 @@ function App() {
         onChange={onChange}
         value={code}
         onMount={editorDidMount}
+        options={{ minimap: { enabled: false }, rulers: [80], tabSize: 2 }}
       />
       <Toolbar onClear={onClearButtonClick} onBuild={onBuildButtonClick} />
       <Console text={consoleOut} />
@@ -74,7 +75,7 @@ function Toolbar(props) {
 }
 
 function Console(props) {
-  return <div className="console">{props.text}</div>;
+  return <div className="console" dangerouslySetInnerHTML={{ __html: props.text }} />;
 }
 
 export default App;

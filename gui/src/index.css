@@ -33,15 +33,14 @@ body {
   margin-right: 10px;
 }
 
-.ace-editor {
-    width: 100%;
-    height: 480px !important;
-}
-
 .console {
   width: 100%;
   height: 120px;
   font-family: monospace;
   overflow: auto;
   white-space: pre-line;
+}
+
+.error {
+  color: red;
 }
