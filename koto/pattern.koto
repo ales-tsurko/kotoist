@@ -1,8 +1,6 @@
 import koto
 from test import assert, assert_eq, assert_near
-from number import infinity
-
-inf = infinity
+inf = from number import infinity
 
 as_iter = |value|
   if koto.type(value) == "Iterator"

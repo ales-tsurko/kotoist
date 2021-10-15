@@ -58,5 +58,5 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo install koto_cli
+          cargo install koto_cli --git https://github.com/koto-lang/koto.git
           koto --tests koto/pattern.koto
