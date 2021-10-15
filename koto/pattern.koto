@@ -96,6 +96,46 @@ list.normalize_sum = |self|
   divisor = self.iter().sum()
   return self.iter().each(|x| x / divisor).to_list()
 
+iterator.add = |self, other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| x + other)
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a + b)
+  else
+    return self
+
+iterator.sub = |self, other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| x - other)
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a - b)
+  else
+    return self
+
+iterator.mul = |self, other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| x * other)
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a * b)
+  else
+    return self
+
+iterator.div = |self, other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| x / other)
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a / b)
+  else
+    return self
+
+iterator.mod = |self, other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| x % other)
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a % b)
+  else
+    return self
+
 pbeta = |lo, hi, prob1, prob2, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
@@ -869,6 +909,56 @@ export @tests =
     expected = [0.07142857142857142, 0.21428571428571427, 0.7142857142857143]
     for n in 0..expected.size()
       assert_near result[n], expected[n], 0.00001
+
+  @test iterator_add: ||
+    iter = pseq([1,2,3]).add(12)
+    expected = [13,14,15]
+    for item in expected
+      assert_eq iter.next(), item
+    iter = pseq([1,2,3], inf).add(pseq([1,2], inf))
+    expected = [2,4,4,3,3,5]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test iterator_sub: ||
+    iter = pseq([1,2,3]).sub(12)
+    expected = [-11, -10, -9]
+    for item in expected
+      assert_eq iter.next(), item
+    iter = pseq([1,2,3], inf).sub(pseq([1,2], inf))
+    expected = [0,0,2,-1,1,1]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test iterator_mul: ||
+    iter = pseq([1,2,3]).mul(12)
+    expected = [12, 24, 36]
+    for item in expected
+      assert_eq iter.next(), item
+    iter = pseq([1,2,3], inf).mul(pseq([1,2], inf))
+    expected = [1,4,3,2,2,6]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test iterator_div: ||
+    iter = pseq([2, 4, 6]).div(2)
+    expected = [1,2,3]
+    for item in expected
+      assert_eq iter.next(), item
+    iter = pseq([2,4,6], inf).div(pseq([1,2], inf))
+    expected = [2,2,6,1,4,3]
+    for item in expected
+      assert_eq iter.next(), item
+
+  @test iterator_mod: ||
+    iter = pseq([2, 3, 4]).mod(2)
+    expected = [0,1,0]
+    for item in expected
+      assert_eq iter.next(), item
+    iter = pseq([2,4,6], inf).mod(pseq([2,3], inf))
+    expected = [0, 1, 0, 2, 0, 0]
+    for item in expected
+      assert_eq iter.next(), item
 
   @test pbeta: ||
     iter = pbeta 0, 1, 0.1, 0.1
