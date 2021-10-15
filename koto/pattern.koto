@@ -2,6 +2,8 @@ import koto
 from test import assert, assert_eq, assert_near
 from number import infinity
 
+inf = infinity
+
 as_iter = |value|
   if koto.type(value) == "Iterator"
     loop
@@ -78,6 +80,11 @@ list.normalize_sum = |self|
   return self.iter().each(|x| x / divisor).to_list()
 
 pbeta = |lo, hi, prob1, prob2, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if prob1 == () then prob1 = 1
+  if prob2 == () then prob2 = 1
+  if length == () then length = inf
   lo_iter = as_iter lo
   hi_iter = as_iter hi
   prob1_iter = as_iter prob1
@@ -115,6 +122,10 @@ pbeta = |lo, hi, prob1, prob2, length|
     length -= 1
 
 pbrown = |lo, hi, step, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if step == () then step = 0.125
+  if length == () then length = inf
   lo_iter = as_iter lo
   hi_iter = as_iter hi
   step_iter = as_iter step
@@ -146,6 +157,10 @@ pbrown = |lo, hi, step, length|
     length -= 1
 
 pgbrown = |lo, hi, step, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if step == () then step = 0.125
+  if length == () then length = inf
   lo_iter = as_iter lo
   hi_iter = as_iter hi
   step_iter = as_iter step
@@ -177,6 +192,9 @@ pgbrown = |lo, hi, step, length|
     length -= 1
 
 pcauchy = |mean, spread, length|
+  if mean == () then mean = 0
+  if spread == () then spread = 1
+  if length == () then length = inf
   mean_iter = as_iter mean
   spread_iter = as_iter spread
   mean_val = ()
@@ -215,6 +233,7 @@ pclump = |n, pattern|
       li = []
 
 pclutch = |pattern, connected|
+  if connected == () then connected = true
   val = ()
 
   loop
@@ -232,6 +251,7 @@ pclutch = |pattern, connected|
       yield val
 
 pconst = |sum, pattern, tollerance|
+  if tollerance == () then tollerance = 0.001
   iter = as_iter pattern
   delta = ()
   elapsed = 0.0
@@ -271,6 +291,9 @@ pdup = |n, pattern|
       n -= 1
 
 pexprand = |lo, hi, length|
+  if lo == () then lo = 0.0001
+  if hi == () then hi = 1
+  if length == () then length = inf
   lo_iter = as_iter lo
   hi_iter = as_iter hi
 
@@ -285,6 +308,9 @@ pexprand = |lo, hi, length|
     length -= 1
 
 pgauss = |mean, dev, length|
+  if mean == () then mean = 0
+  if dev == () then dev = 1
+  if length == () then length = inf
   mean_iter = as_iter mean
   dev_iter = as_iter dev
 
@@ -301,6 +327,9 @@ pgauss = |mean, dev, length|
     length -= 1
 
 pgeom = |start, grow, length|
+  if start == () then start = 0
+  if grow == () then grow = 1
+  if length == () then length = inf
   grow_iter = as_iter grow
   outval = ()
   counter = 0
@@ -316,6 +345,9 @@ pgeom = |start, grow, length|
     yield outval
 
 pwhite = |lo, hi, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if length == () then length = inf
   lo_iter = as_iter lo
   hi_iter = as_iter hi
 
@@ -330,6 +362,9 @@ pwhite = |lo, hi, length|
     yield rrand lo_val, hi_val
 
 plprand = |lo, hi, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if length == () then length = inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -338,6 +373,9 @@ plprand = |lo, hi, length|
     yield iter1.next().min iter2.next()
 
 phprand = |lo, hi, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if length == () then length = inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -346,6 +384,9 @@ phprand = |lo, hi, length|
     yield iter1.next().max iter2.next()
 
 pmeanrand = |lo, hi, length|
+  if lo == () then lo = 0
+  if hi == () then hi = 1
+  if length == () then length = inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -354,6 +395,7 @@ pmeanrand = |lo, hi, length|
     yield (iter1.next() + iter2.next()) * 0.5
 
 pindex = |list_pat, index_pat, repeats|
+  if repeats == () then repeats = 1
   index_iter = ()
   index = ()
   item = ()
@@ -381,6 +423,7 @@ pindex = |list_pat, index_pat, repeats|
 
 pfsm = |list, repeats|
   if list.is_empty() then return
+  if repeats == () then repeats = 1
   item = ()
   index = 0
   max_state = ((list.size() - 1) / 2).floor() - 1
@@ -400,8 +443,10 @@ pfsm = |list, repeats|
     repeats -= 1
 
 place = |list, repeats, offset|
+  if repeats == () then repeats = 1
+  if offset == () then offset = 0
   offset_iter = as_iter offset
-  # we don't use repeats here as it can be infinity, which won't work for
+  # we don't use repeats here as it can be inf, which won't work for
   # indexing
   repeat_num = 0 
   while repeats > 0
@@ -417,6 +462,8 @@ place = |list, repeats, offset|
     repeats -= 1
 
 ppoisson = |mean, length|
+  if mean == () then mean = 1
+  if length == () then length = inf
   mean_iter = as_iter mean
   while length > 0
     mean_val = mean_iter.next()
@@ -431,6 +478,7 @@ ppoisson = |mean, length|
     length -= 1
 
 prand = |list, repeats|
+  if repeats == () then repeats = 1
   while repeats > 0
     item = random.pick list
     if item == () then break
@@ -444,6 +492,7 @@ prand = |list, repeats|
     repeats -= 1
 
 prorate = |proportion, pattern|
+  if pattern == () then pattern = 1
   iter = as_iter pattern
   prop = as_iter proportion
   loop
@@ -457,6 +506,8 @@ prorate = |proportion, pattern|
     yield (1 - c) * val
 
 pseq = |list, repeats, offset|
+  if repeats == () then repeats = 1
+  if offset == () then offset = 0
   offset = as_iter offset
   while repeats > 0
     offset_next = offset.next()
@@ -474,8 +525,10 @@ pseq = |list, repeats, offset|
     repeats -= 1
 
 pser = |list, repeats, offset|
+  if repeats == () then repeats = 1
+  if offset == () then offset = 0
   offset = as_iter offset
-  n = 0 # we use it, because repeats can be infinity
+  n = 0 # we use it, because repeats can be inf
   while repeats > 0
     offset_next = offset.next()
     if offset_next == () then break
@@ -492,6 +545,9 @@ pser = |list, repeats, offset|
     repeats -= 1
 
 pseries = |start, step, length|
+  if start == () then start = 0
+  if step == () then step = 1
+  if length == () then length = inf
   cur = as_iter start
   cur = cur.next()
   len = as_iter length
@@ -506,6 +562,7 @@ pseries = |start, step, length|
     yield outval
 
 pshuf = |list, repeats|
+  if repeats == () then repeats = 1
   list = list.scramble()
   while repeats > 0
     for item in list
@@ -519,6 +576,11 @@ pshuf = |list, repeats|
     repeats -= 1
 
 pslide = |list, repeats, len, step, start, wrap_at_end|
+  if repeats == () then repeats = 1
+  if len == () then len = 3
+  if step == () then step = 1
+  if start == () then start = 0
+  if wrap_at_end == () then wrap_at_end = true
   pos = start
   step_iter = as_iter step
   length_iter = as_iter len
@@ -566,6 +628,7 @@ psubdivide = |n, pattern|
     subdivision = subdivisions.next()
 
 pswitch = |list, which|
+  if which == () then which = 0
   index_iter = as_iter which
   index = index_iter.next()
   while index != ()
@@ -580,6 +643,7 @@ pswitch = |list, which|
     index = index_iter.next()
 
 ptuple = |list, repeats|
+  if repeats == () then repeats = 1
   while repeats > 0
     saw_nil = false
     streams = list.iter().each(|i| as_iter i).to_list()
@@ -595,6 +659,8 @@ ptuple = |list, repeats|
     repeats -= 1
 
 pwalk = |list, step_pattern, direction_pattern, start_pos|
+  if direction_pattern == () then direction_pattern = 1
+  if start_pos == () then start_pos = 0
   index = as_iter(start_pos).next()
   step_iter = as_iter step_pattern
   direction_iter = as_iter direction_pattern
@@ -620,6 +686,7 @@ pwalk = |list, step_pattern, direction_pattern, start_pos|
     step = step_iter.next()
 
 pwrand = |list, weights, repeats|
+  if repeats == () then repeats = 1
   w_iter = as_iter weights
   while repeats > 0
     w_val = w_iter.next()
@@ -633,6 +700,7 @@ pwrand = |list, weights, repeats|
     else
       yield item
     repeats -= 1
+
 
 export @tests =
 
@@ -765,7 +833,7 @@ export @tests =
       assert_near result[n], expected[n], 0.00001
 
   @test pbeta: ||
-    iter = pbeta 0, 1, 0.1, 0.1, infinity
+    iter = pbeta 0, 1, 0.1, 0.1
     expected = [
       0.9999991445264916,
       0.9152024196110354,
@@ -793,7 +861,7 @@ export @tests =
       assert_near iter.next(), item, 0.000001
 
   @test pbrown: ||
-    iter = pbrown 0, 1, 0.1, infinity
+    iter = pbrown 0, 1, 0.1
     expected = [
       0.5493047099653355,
       0.5586484125927252,
@@ -820,7 +888,7 @@ export @tests =
       assert_near iter.next(), item, 0.00001
 
   @test pgbrown: ||
-    iter = pgbrown 0, 1, 0.2, infinity
+    iter = pgbrown 0, 1, 0.2
     expected = [
       0.5328288166246906,
       0.5427860046523808,
@@ -847,7 +915,7 @@ export @tests =
       assert_near iter.next(), item, 0.00001
 
   @test pcauchy: ||
-    iter = pcauchy 0, 10, infinity
+    iter = pcauchy 0, 10
     expected = [
       -25.6,
       5.2147170741223885,
@@ -875,31 +943,31 @@ export @tests =
       assert_near iter.next(), item, 0.1
 
   @test pclump: ||
-    iter = pclump 2, pseq([1,2,3], 1, 0)
+    iter = pclump 2, pseq([1,2,3])
     expected = [[1,2], [3], ()]
     for item in expected
       assert_eq iter.next(), item
 
   @test pclutch: ||
-    iter = pclutch pseq([0,1,2,3], 2, 0), pseq([true, true, false], 3, 0)
+    iter = pclutch pseq([0,1,2,3], 2), pseq([true, true, false], 3)
     expected = [0, 1, 1, 2, 3, 3, 0, 1, 1, ()]
     for item in expected
       assert_eq iter.next(), item
 
   @test pconst: ||
-    iter = pconst 5, pseq([1,2,0.5,0.1], 2, 0), 0.001
+    iter = pconst 5, pseq([1,2,0.5,0.1], 2)
     expected = [1, 2, 0.5, 0.1, 1, 0.40000000000000036, ()]
     for item in expected
       assert_eq iter.next(), item
 
   @test pdup: ||
-    iter = pdup 5, pseq([42,27], infinity, 0)
+    iter = pdup 5, pseq([42,27], inf)
     expected = [42,42,42,42,42]
 
     for item in expected
       assert_eq iter.next(), item
 
-    iter = pdup pseq([2,3,4],2,0), pseq([42,27], infinity, 0)
+    iter = pdup pseq([2,3,4],2), pseq([42,27], inf)
     expected = [
       42, 42, 27, 27, 27, 42, 42, 42, 42, 27, 27, 42, 42, 42, 27, 27, 27, 27
     ]
@@ -908,7 +976,7 @@ export @tests =
       assert_eq iter.next(), item
 
   @test pexprand: ||
-    iter = pexprand 0.0001, 1, infinity
+    iter = pexprand()
     expected = [
       0.029841141583300028,
       0.0004092767114825923,
@@ -935,7 +1003,7 @@ export @tests =
       assert_near iter.next(), item, 0.00001
 
   @test pgauss: ||
-    iter = pgauss 0, 100, infinity
+    iter = pgauss 0, 100
     expected = [
       80.35082837787117,
       46.18109205370832,
@@ -962,7 +1030,7 @@ export @tests =
       assert_near iter.next(), item, 0.1
 
   @test pgeom: ||
-    iter = pgeom 1, 1.1, infinity
+    iter = pgeom 1, 1.1
     expected = [
       1,
       1.1,
@@ -989,7 +1057,7 @@ export @tests =
       assert_eq iter.next(), item
 
   @test pwhite: ||
-    iter = pwhite 0, 1, infinity
+    iter = pwhite()
     expected = [
       0.6187038583014022,
       0.1530042583196669,
@@ -1016,7 +1084,7 @@ export @tests =
       assert_near iter.next(), item, 0.0001
 
   @test plprand: ||
-    iter = plprand 0, 1, infinity
+    iter = plprand()
     expected = [
       0.1530042583196669,
       0.4309733448253874,
@@ -1043,7 +1111,7 @@ export @tests =
       assert_near iter.next(), item, 0.00001
 
   @test phprand: ||
-    iter = phprand 0, 1, infinity
+    iter = phprand()
     expected = [
       0.6187038583014022,
       0.5467185131369483,
@@ -1070,7 +1138,7 @@ export @tests =
       assert_near iter.next(), item, 0.00001
 
   @test pmeanrand: ||
-    iter = pmeanrand 0, 1, infinity
+    iter = pmeanrand()
     expected = [
       0.38585405831053454,
       0.48884592898116785,
@@ -1099,8 +1167,8 @@ export @tests =
   @test pindex: ||
     iter = pindex(
       [7, 13, 12, 2, 2, 2, 5], 
-      pseq([0, 0, 2, 0, 4, 6, 7], infinity, 0), 
-      infinity)
+      pseq([0, 0, 2, 0, 4, 6, 7], inf), 
+      inf)
     expected = [7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5]
     for item in expected
       assert_eq iter.next(), item
@@ -1111,26 +1179,26 @@ export @tests =
         67, [0, 0, 3],
         72, [2],
         73, [0, 2],
-        pseq([74, 75, 76, 77], 1, 0), [2, 3, 3],
-        (), ()], infinity)
+        pseq([74, 75, 76, 77]), [2, 3, 3],
+        (), ()], inf)
     expected = [72,73,73,73,73,73,73,67,67,67,67,74,75,76,77,73,73,73,67,73]
 
     for item in expected
       assert_eq iter.next(), item
 
   @test place: ||
-    iter = place [1, [2, 5], [3, 6]], infinity, 0
+    iter = place [1, [2, 5], [3, 6]], inf
     expected = [1,2,3,1,5,6,1,2]
     for item in expected
       assert_eq iter.next(), item
 
     iter = place(
-      [1, pseq([2, 5], infinity, 0), pseq([3, 6], infinity, 0)], infinity, 0)
+      [1, pseq([2, 5], inf), pseq([3, 6], inf)], inf)
     for item in expected
       assert_eq iter.next(), item
 
   @test ppoisson: ||
-    iter = ppoisson 10, infinity
+    iter = ppoisson 10
     expected = [12,10,11,10,11,8,9,10,7,10,11,10,9,14,11,8,9,8,12,6]
     for item in expected
       assert_eq iter.next(), item
@@ -1138,48 +1206,48 @@ export @tests =
   @test prand: ||
     # FIXME will hang, because we can't copy iterators from generators
     # iter = prand [
-      # pseq([0,1], 1, 0), 
-      # pseq([2,3], 1, 0), 
-      # pseq([4,5], 1, 0)
-    # ], infinity
+      # pseq([0,1]), 
+      # pseq([2,3]), 
+      # pseq([4,5])
+    # ], inf
 
-    iter = prand (0..10).to_list(), infinity
+    iter = prand (0..10).to_list(), inf
     expected = [6,1,5,4,9,6,4,6,6,8,2,2,8,4,0,7,6,1,7,5]
     for item in expected
       assert_eq iter.next(), item
 
   @test prorate: ||
-    iter = prorate pseq([0.35, 0.5, 0.8], 1, 0), 1
+    iter = prorate pseq([0.35, 0.5, 0.8])
     expected = [0.35, 0.65, 0.5, 0.5, 0.8, 0.19999999999999996]
     for item in expected
       assert_near iter.next(), item, 0.001
 
-    iter = prorate pseq([0.35, 0.5, 0.8], 1, 0), prand([20, 1], infinity)
+    iter = prorate pseq([0.35, 0.5, 0.8]), prand([20, 1], inf)
     expected = [0.35, 0.65, 10.0, 10.0, 0.8, 0.19999999999999996]
     for item in expected
       assert_near iter.next(), item, 0.001
 
   @test pseq: ||
-    foo = pseq [0,1,2], infinity, 0
+    foo = pseq [0,1,2], inf
     expected = [0,1,2,0,1]
     for item in expected
       assert_eq foo.next(), item
 
     # FIXME won't work at the moment because koto can't copy iterators returned
     # by generators
-    # foo = pseq [pseq([0,2], 2, 0), pseq([1,3], 2, 0)], 2, 0
+    # foo = pseq [pseq([0,2], 2), pseq([1,3], 2)], 2
     # expected = [0,2,0,2,1,3,1,3]
     # for _ in 0..2
       # for item in expected
         # assert_eq foo.next(), item
 
-    foo = pseq [0,1,2], infinity, (pseq [0,1,4], 1, 0)
+    foo = pseq [0,1,2], inf, (pseq [0,1,4])
     expected = [0,1,2,1,2,0,1,2,0,()]
     for item in expected
       assert_eq foo.next(), item
 
   @test pser: ||
-    iter = pser [1, 2, 3], 5, 0
+    iter = pser [1, 2, 3], 5
     expected = [1, 2, 3, 1, 2, ()]
     for item in expected
       assert_eq iter.next(), item
@@ -1218,15 +1286,15 @@ export @tests =
       assert_eq iter.next(), item
 
   @test pslide: ||
-    iter = pslide [1, 2, 3, 4, 5], infinity, 3, 1, 0, true
+    iter = pslide [1, 2, 3, 4, 5], inf
     expected = [1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 1, 5, 1, 2, 1, 2, 3, 2, 3]
     for item in expected
       assert_eq iter.next(), item
 
   @test psubdivide: ||
     iter = psubdivide(
-      pseq([1,1,1,1,1,2,2,2,2,2,0,1,3,4,0], infinity, 0),
-      pseq([0.5, 1, 2, 0.25,0.25],infinity, 0)
+      pseq([1,1,1,1,1,2,2,2,2,2,0,1,3,4,0], inf),
+      pseq([0.5, 1, 2, 0.25,0.25],inf)
     )
     expected = [
       0.5,
@@ -1256,34 +1324,33 @@ export @tests =
   @test pswitch: ||
     # FIXME because koto can't copy generator's iterator now, it'll continuously
     # return 800 at the end
-    a = pseq [1, 2, 3], 2, 0
-    b = pseq [65, 76], 1, 0
-    iter = pswitch [a, b, 800], pseq([2, 2, 0, 1], infinity, 0)
+    a = pseq [1, 2, 3], 2
+    b = pseq [65, 76]
+    iter = pswitch [a, b, 800], pseq([2, 2, 0, 1], inf)
     expected = [800,800,1,2,3,1,2,3,65,76,800,800]
     for item in expected
       assert_eq iter.next(), item
 
   @test ptuple: ||
     # FIXME don't work because of the generator's iterator copyability
-    a = pseq [1, 2, 3], infinity, 0
-    b = pseq [65, 76], infinity, 0
-    iter = ptuple [a, a, b], infinity
+    a = pseq [1, 2, 3], inf
+    b = pseq [65, 76], inf
+    iter = ptuple [a, a, b], inf
     # for _ in 0..8
       # io.print iter.next()
 
   @test pwalk: ||
     iter = pwalk(
       [1, 2, 3, 4, 5, 6, 7], 
-      pseq([1], infinity, 0), 
-      pseq([1, -1], infinity, 0), 
-      0
+      pseq([1], inf), 
+      pseq([1, -1], inf) 
     )
     expected = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 2, 3, 4, 5, 6, 7, 6]
     for item in expected
       assert_eq iter.next(), item
 
   @test pwrand: ||
-    iter = pwrand([1, 2, 3], [1,3,5].normalize_sum(), infinity)
+    iter = pwrand([1, 2, 3], [1,3,5].normalize_sum(), inf)
     result = []
     for _ in 0..100
       result.push iter.next()
