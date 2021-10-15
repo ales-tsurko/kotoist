@@ -57,6 +57,25 @@ number.round = |self, quant|
 number.sign = |self|
   if self >= 0 then 1 else -1
 
+number.wrap = |self, lo, hi|
+    range = 0
+    if self >= hi
+      range = hi - lo
+      self -= range
+      if self < hi
+        return self
+    else if self < lo
+      range = hi - lo
+      self += range
+      if self >= lo
+        return self
+    else
+      return self
+
+    if hi == lo
+      return lo
+    return self - range * ((self - lo) / range).floor()
+
 list.scramble = |self|
   result = []
   li_cp = self.copy()
@@ -799,6 +818,11 @@ export @tests =
     assert_eq 4.5.round(0.5), 4.5
     assert_eq 0.01.round(0.5), 0
     assert_eq 0.9.round(0.5), 1.0
+
+  @test number_wrap: ||
+    assert_near 1.1.wrap(0.0, 1.0), 0.1, 0.1
+    assert_near 1.1.wrap(0.0, -1.0), -0.9, 0.1
+    assert_near 2.1.wrap(2.0, -1.0), -0.9, 0.1
 
   @test scramble: ||
     result = (0..10).to_list().scramble()
