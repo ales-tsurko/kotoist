@@ -8,14 +8,15 @@ function App() {
   const didMountRef = useRef(false);
   const editorRef = useRef(null);
   const [padsVisible, setPadsVisible] = useState(false);
+  const [currentPadSelection, setCurrentPadSelection] = useState({});
 
   useEffect(() => {
     if (didMountRef.current) {
       // window.external.invoke("SEND_CONSOLE_OUT " + consoleOut);
     } else {
       didMountRef.current = true;
-      // setCode(window.external.invoke("GET_CODE"));
-      // setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
+      setCode(window.external.invoke("GET_CODE"));
+      setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
       window.addEventListener("SEND_CONSOLE_OUT", (e) =>
         setConsoleOut(e.detail)
       );
@@ -26,9 +27,15 @@ function App() {
     editorRef.current = editor;
   };
 
+  const onPadsSelectionChange = (value) => {
+    setCurrentPadSelection(value);
+    window.external.invoke(`SELECT_PAD ${JSON.stringify(value)}`);
+    setCode(window.external.invoke("GET_CODE"));
+  };
+
   const onChange = (newValue) => {
     setCode(newValue);
-    // window.external.invoke("SEND_CODE " + newValue);
+    window.external.invoke("SEND_CODE " + newValue);
   };
 
   const onTogglePads = () => {
@@ -37,7 +44,7 @@ function App() {
 
   const onClearButtonClick = () => {
     setConsoleOut("");
-    // window.external.invoke("SEND_CONSOLE_OUT ");
+    window.external.invoke("SEND_CONSOLE_OUT ");
   };
 
   const onBuildButtonClick = () => {
@@ -45,14 +52,13 @@ function App() {
       .getModel()
       .getValueInRange(editorRef.current.getSelection());
     const block = selection.length > 0 ? selection : code;
-    // window.external.invoke("EVAL_CODE " + block);
-    // setConsoleOut(result);
+    window.external.invoke("EVAL_CODE " + block);
   };
 
   return (
     <React.Fragment>
       <div className="editor-container">
-        <Pads visible={padsVisible} />
+        <Pads visible={padsVisible} onSelectionChange={onPadsSelectionChange} />
         <Editor
           width="100%"
           height="330px"
@@ -67,6 +73,7 @@ function App() {
         onTogglePads={onTogglePads}
         onClear={onClearButtonClick}
         onBuild={onBuildButtonClick}
+        padSelection={currentPadSelection}
       />
       <Console text={consoleOut} />
     </React.Fragment>
@@ -76,8 +83,9 @@ function App() {
 function Pads(props) {
   const [selection, setSelection] = useState(0);
 
-  const onSelectionChange = (number) => {
-    setSelection(number);
+  const onSelectionChange = (value) => {
+    setSelection(value.number);
+    props.onSelectionChange(value);
   };
 
   const pads = Array(128)
@@ -99,6 +107,8 @@ function Pads(props) {
 function Pad(props) {
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [isHover, setIsHover] = useState(false);
+  const defaultValue = `snippet ${props.number + 1}`;
+  const [name, setName] = useState(defaultValue);
   const pitches = [
     "C",
     "C#",
@@ -145,26 +155,39 @@ function Pad(props) {
       >
         {noteName}
       </div>
-      <div
+      <input
+        type="text"
         className={`pad-selection ${props.selected ? "pad-selected" : ""}`}
-        onClick={() => props.onSelectionChange(props.number)}
-      ></div>
+        onClick={() =>
+          props.onSelectionChange({ number: props.number, noteName, name })
+        }
+        value={props.padName || defaultValue}
+        maxLength={20}
+        onChange={(event) => setName(event.target.value)}
+      />
     </div>
   );
 }
 
 function Toolbar(props) {
+  const selectionText = props.padSelection.noteName
+    ? `${props.padSelection.number + 1} | \
+  ${props.padSelection.noteName} | ${props.padSelection.name}`
+    : "";
   return (
     <div className="toolbar">
-      <button onClick={props.onTogglePads}>
-        <FaTh />
-      </button>
-      <button onClick={props.onBuild}>
-        <FaHammer />
-      </button>
-      <button onClick={props.onClear}>
-        <FaBroom />
-      </button>
+      <label className="toolbar-selection-text">{selectionText}</label>
+      <div className="toolbar-buttons-container">
+        <button onClick={props.onTogglePads}>
+          <FaTh />
+        </button>
+        <button onClick={props.onBuild}>
+          <FaHammer />
+        </button>
+        <button onClick={props.onClear}>
+          <FaBroom />
+        </button>
+      </div>
     </div>
   );
 }

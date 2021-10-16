@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use vst_gui::JavascriptCallback;
 
-use crate::parameters::Parameters;
+use crate::parameters::{Parameters, Pad};
 
 pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback {
     Box::new(move |message: String| -> String {
@@ -22,6 +22,7 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::PostStderr => on_post_stderr(message, &parameters),
             Command::PostStdout => on_post_stdout(message, &parameters),
             Command::GetConsoleOut => on_get_console_out(&parameters),
+            Command::SelectPad => on_select_pad(message, &parameters),
             Command::Unknown => String::new(),
         }
     })
@@ -70,6 +71,14 @@ fn on_get_console_out(parameters: &Parameters) -> String {
     parameters.console_out()
 }
 
+fn on_select_pad(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::SelectPad.to_string();
+    let out = &message[command_str.len() + 1..];
+    let pad: Pad = serde_json::from_str(out).unwrap();
+    parameters.set_pad_selection(pad);
+    String::new()
+}
+
 #[derive(Debug)]
 pub(crate) enum Command {
     SendCode,
@@ -79,6 +88,7 @@ pub(crate) enum Command {
     GetConsoleOut,
     PostStderr,
     PostStdout,
+    SelectPad,
     Unknown,
 }
 
@@ -107,6 +117,7 @@ impl From<&str> for Command {
             "GET_CONSOLE_OUT" => Self::GetConsoleOut,
             "POST_STDERR" => Self::PostStderr,
             "POST_STDOUT" => Self::PostStdout,
+            "SELECT_PAD" => Self::SelectPad,
             _ => Self::Unknown,
         }
     }
@@ -122,6 +133,7 @@ impl ToString for Command {
             Self::GetConsoleOut => "GET_CONSOLE_OUT".to_string(),
             Self::PostStderr => "POST_STDERR".to_string(),
             Self::PostStdout => "POST_STDOUT".to_string(),
+            Self::SelectPad => "SELECT_PAD".to_string(),
             Self::Unknown => String::new(),
         }
     }

@@ -1,6 +1,7 @@
 use std::sync::RwLock;
 
 use koto::{Koto, KotoSettings};
+use serde::{Deserialize, Serialize};
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 
@@ -10,6 +11,8 @@ pub(crate) struct Parameters {
     host: Option<HostCallback>,
     pub(crate) is_console_changed: RwLock<bool>,
     pub(crate) koto: RwLock<Koto>,
+    selected_pad: RwLock<Pad>,
+    snippets: RwLock<[String; 128]>,
 }
 
 impl Parameters {
@@ -17,16 +20,25 @@ impl Parameters {
         self.host = Some(host);
     }
 
+    pub(crate) fn set_pad_selection(&self, selection: Pad) {
+        if let Some(host) = self.host {
+            *self.selected_pad.write().unwrap() = selection;
+            host.update_display(); // notify host that the plugin is changing a parameter
+            host.automate(1, 0.0);
+        }
+    }
+
     pub(crate) fn set_code(&self, code: &str) {
         if let Some(host) = self.host {
-            *self.code.write().unwrap() = code.to_string();
+            self.snippets.write().unwrap()[self.selected_pad.read().unwrap().number] =
+                code.to_string();
             host.update_display(); // notify host that the plugin is changing a parameter
             host.automate(0, 0.0);
         }
     }
 
     pub(crate) fn code(&self) -> String {
-        (*self.code.read().unwrap()).clone()
+        self.snippets.read().unwrap()[self.selected_pad.read().unwrap().number].clone()
     }
 
     pub(crate) fn set_console_out(&self, out: &str) {
@@ -70,6 +82,7 @@ impl Default for Parameters {
             run_tests: cfg!(debug_assertions),
             ..Default::default()
         });
+        const VAL: String = String::new();
 
         // ..Default::default() calls it recursively, so we call it for each field separatelly
         Self {
@@ -78,6 +91,8 @@ impl Default for Parameters {
             code: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
+            selected_pad: Default::default(),
+            snippets: RwLock::new([VAL; 128]),
         }
     }
 }
@@ -99,4 +114,10 @@ impl PluginParameters for Parameters {
     fn load_bank_data(&self, data: &[u8]) {
         self.load_preset_data(data);
     }
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub(crate) struct Pad {
+    name: String,
+    number: usize,
 }

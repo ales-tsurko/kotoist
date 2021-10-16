@@ -15,30 +15,42 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
+  height: 100%;
+  overscroll-behavior: none;
   overflow: auto;
 }
 
 .editor-container {
   position: relative;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   width: 100%;
   height: 330px;
+  overscroll-behavior: none;
+  overflow: hidden;
 }
 
 .pads {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-evenly;
   position: absolute;
   margin-top: -330px;
   transition: margin-top 0.25s;
-  top: 0;
   width: 100%;
   height: 100%;
   background: yellow;
   opacity: 0.7;
   overflow: auto;
   z-index: 10;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overscroll-behavior: none;
 }
 
 .pads-visible {
@@ -59,6 +71,7 @@ body {
   user-select: none;
   opacity: 1;
   transition: opacity 0.15s;
+  font-family: "Helvetica Neue", "Arial", sans-serif;
 }
 
 .pad-button-hover {
@@ -67,9 +80,13 @@ body {
 
 .pad-selection {
   width: 100%;
-  height: 15px;
+  height: 20px;
+  text-align: center;
   margin-top: 5px;
   background: white;
+  border: none;
+  padding: 0;
+  cursor: default;
 }
 
 .pad-selected {
@@ -83,7 +100,7 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   width: 100%;
   height: 30px;
   background: #ccc;
@@ -93,6 +110,10 @@ body {
   width: 30px;
   height: 22px;
   margin-right: 10px;
+}
+
+.toolbar-selection-text {
+  margin-left: 10px;
 }
 
 .console {
