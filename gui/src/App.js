@@ -16,6 +16,9 @@ function App() {
     } else {
       didMountRef.current = true;
       setCode(window.external.invoke("GET_CODE"));
+      setCurrentPadSelection(
+        JSON.parse(window.external.invoke("GET_SELECTED_PAD"))
+      );
       setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
       window.addEventListener("SEND_CONSOLE_OUT", (e) =>
         setConsoleOut(e.detail)

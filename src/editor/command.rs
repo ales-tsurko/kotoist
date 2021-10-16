@@ -1,13 +1,12 @@
 /// This module contains all editor commands sent between JS GUI and Rust.
 ///
 /// It also contains dispatcher for those commands.
-
 use std::string::ToString;
 use std::sync::Arc;
 
 use vst_gui::JavascriptCallback;
 
-use crate::parameters::{Parameters, Pad};
+use crate::parameters::{Pad, Parameters};
 
 pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback {
     Box::new(move |message: String| -> String {
@@ -23,6 +22,7 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::PostStdout => on_post_stdout(message, &parameters),
             Command::GetConsoleOut => on_get_console_out(&parameters),
             Command::SelectPad => on_select_pad(message, &parameters),
+            Command::GetSelectedPad => on_get_selected_pad(&parameters),
             Command::Unknown => String::new(),
         }
     })
@@ -74,9 +74,18 @@ fn on_get_console_out(parameters: &Parameters) -> String {
 fn on_select_pad(message: String, parameters: &Parameters) -> String {
     let command_str = Command::SelectPad.to_string();
     let out = &message[command_str.len() + 1..];
-    let pad: Pad = serde_json::from_str(out).unwrap();
-    parameters.set_pad_selection(pad);
+    if let Ok(pad) = serde_json::from_str::<Pad>(out) {
+        parameters.set_selected_pad(pad);
+    }
     String::new()
+}
+
+fn on_get_selected_pad(parameters: &Parameters) -> String {
+    let pad = parameters.selected_pad();
+    match serde_json::to_string(&pad) {
+        Ok(res) => res,
+        Err(e) => format!("{}", e)
+    }
 }
 
 #[derive(Debug)]
@@ -89,6 +98,7 @@ pub(crate) enum Command {
     PostStderr,
     PostStdout,
     SelectPad,
+    GetSelectedPad,
     Unknown,
 }
 
@@ -118,6 +128,7 @@ impl From<&str> for Command {
             "POST_STDERR" => Self::PostStderr,
             "POST_STDOUT" => Self::PostStdout,
             "SELECT_PAD" => Self::SelectPad,
+            "GET_SELECTED_PAD" => Self::GetSelectedPad,
             _ => Self::Unknown,
         }
     }
@@ -134,6 +145,7 @@ impl ToString for Command {
             Self::PostStderr => "POST_STDERR".to_string(),
             Self::PostStdout => "POST_STDOUT".to_string(),
             Self::SelectPad => "SELECT_PAD".to_string(),
+            Self::GetSelectedPad => "GET_SELECTED_PAD".to_string(),
             Self::Unknown => String::new(),
         }
     }

@@ -6,7 +6,6 @@ use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 
 pub(crate) struct Parameters {
-    code: RwLock<String>,
     pub(crate) console_out: RwLock<String>,
     host: Option<HostCallback>,
     pub(crate) is_console_changed: RwLock<bool>,
@@ -20,12 +19,16 @@ impl Parameters {
         self.host = Some(host);
     }
 
-    pub(crate) fn set_pad_selection(&self, selection: Pad) {
+    pub(crate) fn set_selected_pad(&self, selection: Pad) {
         if let Some(host) = self.host {
             *self.selected_pad.write().unwrap() = selection;
             host.update_display(); // notify host that the plugin is changing a parameter
             host.automate(1, 0.0);
         }
+    }
+
+    pub(crate) fn selected_pad(&self) -> Pad {
+        self.selected_pad.read().unwrap().clone()
     }
 
     pub(crate) fn set_code(&self, code: &str) {
@@ -88,7 +91,6 @@ impl Default for Parameters {
         Self {
             koto: RwLock::new(koto),
             is_console_changed: Default::default(),
-            code: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
             selected_pad: Default::default(),
@@ -99,7 +101,11 @@ impl Default for Parameters {
 
 impl PluginParameters for Parameters {
     fn get_preset_data(&self) -> Vec<u8> {
-        self.code.read().unwrap().as_bytes().into()
+        let state = State {
+            snippets: self.snippets.read().unwrap().to_vec(),
+            selection: self.selected_pad.read().unwrap().clone(),
+        };
+        bincode::serialize(&state).unwrap_or(Vec::new())
     }
 
     fn get_bank_data(&self) -> Vec<u8> {
@@ -107,8 +113,10 @@ impl PluginParameters for Parameters {
     }
 
     fn load_preset_data(&self, data: &[u8]) {
-        let value = String::from_utf8(data.into()).unwrap();
-        *self.code.write().unwrap() = value.clone();
+        if let Ok(state) = bincode::deserialize::<State>(data) {
+            (*self.snippets.write().unwrap()).clone_from_slice(&state.snippets);
+            *self.selected_pad.write().unwrap() = state.selection.clone();
+        }
     }
 
     fn load_bank_data(&self, data: &[u8]) {
@@ -116,7 +124,13 @@ impl PluginParameters for Parameters {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
+struct State {
+    snippets: Vec<String>,
+    selection: Pad,
+}
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub(crate) struct Pad {
     name: String,
     number: usize,
