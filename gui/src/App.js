@@ -233,12 +233,21 @@ function Toolbar(props) {
 }
 
 function Console(props) {
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [props.text]);
+
   return (
-    <div
-      onContextMenu={(e) => e.preventDefault()}
-      className="console"
-      dangerouslySetInnerHTML={{ __html: props.text }}
-    />
+    <div className="console" onContextMenu={(e) => e.preventDefault()}>
+      <span dangerouslySetInnerHTML={{ __html: props.text }} />
+      <div ref={messagesEndRef} />
+    </div>
   );
 }
 
