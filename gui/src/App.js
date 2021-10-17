@@ -111,6 +111,7 @@ function App() {
 function Pads(props) {
   const [selection, setSelection] = useState(0);
   const didMountRef = useRef(false);
+  const [clickedPad, setClickedPad] = useState(-1);
 
   useEffect(() => {
     if (!didMountRef.current) {
@@ -128,6 +129,10 @@ function Pads(props) {
     props.onSelectionChange(value);
   };
 
+  const onClickPad = (number) => {
+    setClickedPad(number);
+  };
+
   const pads = Array(128)
     .fill(0)
     .map((_, n) => (
@@ -136,6 +141,8 @@ function Pads(props) {
         number={n}
         onSelectionChange={onSelectionChange}
         selected={selection === n}
+        playing={clickedPad === n}
+        onClick={onClickPad}
       />
     ));
 
@@ -198,7 +205,12 @@ function Pad(props) {
   };
 
   return (
-    <div className="pad" onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className={`pad ${
+        props.selected ? "pad-selected" : ""
+      } ${props.playing ? "pad-playing" : ""}`}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div
         className={`pad-button ${
           isHover && !isMouseDown ? "pad-button-hover" : ""
@@ -207,12 +219,13 @@ function Pad(props) {
         onMouseUp={onMouseUp}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        onClick={() => props.onClick(props.number)}
       >
         {noteName}
       </div>
       <input
         type="text"
-        className={`pad-selection ${props.selected ? "pad-selected" : ""}`}
+        className="pad-selection"
         onClick={() => props.onSelectionChange({ number: props.number, name })}
         value={name.length > 0 ? name : defaultValue}
         maxLength={20}
