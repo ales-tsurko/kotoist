@@ -17,6 +17,7 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::SendCode => on_send_code(message, &parameters),
             Command::GetCode => on_get_code(&parameters),
             Command::EvalCode => on_eval_code(message, &parameters),
+            Command::EvalSnippetAt => on_eval_snippet_at(message, &parameters),
             Command::SendConsoleOut => on_send_console_out(message, &parameters),
             Command::PostStderr => on_post_stderr(message, &parameters),
             Command::PostStdout => on_post_stdout(message, &parameters),
@@ -45,6 +46,15 @@ fn on_eval_code(message: String, parameters: &Parameters) -> String {
     let command_str = Command::EvalCode.to_string();
     let code = &message[command_str.len() + 1..];
     parameters.eval_code(code);
+    String::new()
+}
+
+fn on_eval_snippet_at(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::EvalSnippetAt.to_string();
+    let number = &message[command_str.len() + 1..];
+    if let Ok(index) = number.parse::<usize>() {
+        parameters.eval_snippet_at(index);
+    }
     String::new()
 }
 
@@ -114,6 +124,7 @@ pub(crate) enum Command {
     SendCode,
     GetCode,
     EvalCode,
+    EvalSnippetAt,
     SendConsoleOut,
     GetConsoleOut,
     PostStderr,
@@ -146,6 +157,7 @@ impl From<&str> for Command {
             "SEND_CODE" => Self::SendCode,
             "GET_CODE" => Self::GetCode,
             "EVAL_CODE" => Self::EvalCode,
+            "EVAL_SNIPPET_AT" => Self::EvalSnippetAt,
             "SEND_CONSOLE_OUT" => Self::SendConsoleOut,
             "GET_CONSOLE_OUT" => Self::GetConsoleOut,
             "POST_STDERR" => Self::PostStderr,
@@ -165,6 +177,7 @@ impl ToString for Command {
             Self::SendCode => "SEND_CODE".to_string(),
             Self::GetCode => "GET_CODE".to_string(),
             Self::EvalCode => "EVAL_CODE".to_string(),
+            Self::EvalSnippetAt => "EVAL_SNIPPET_AT".to_string(),
             Self::SendConsoleOut => "SEND_CONSOLE_OUT".to_string(),
             Self::GetConsoleOut => "GET_CONSOLE_OUT".to_string(),
             Self::PostStderr => "POST_STDERR".to_string(),

@@ -155,6 +155,9 @@ function Pad(props) {
 
   const onMouseDown = () => {
     setIsMouseDown(true);
+    if (!runsInBrowser) {
+      window.external.invoke(`EVAL_SNIPPET_AT ${props.number}`);
+    }
   };
 
   const onMouseUp = () => {

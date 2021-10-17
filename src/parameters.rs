@@ -70,6 +70,10 @@ impl Parameters {
         (*self.console_out.read().unwrap()).clone()
     }
 
+    pub(crate) fn eval_snippet_at(&self, index: usize) {
+        self.eval_code(&self.snippets.read().unwrap()[index]);
+    }
+
     pub(crate) fn eval_code(&self, code: &str) {
         let mut koto = self.koto.write().unwrap();
         match koto.compile(code) {
