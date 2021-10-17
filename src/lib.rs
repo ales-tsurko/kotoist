@@ -26,6 +26,7 @@ use std::sync::{Arc, Mutex, Once};
 use log::{info, LevelFilter};
 
 use vst::api::{Event, Events, Supported};
+use vst::event::{Event as EventEnum, MidiEvent};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
@@ -113,6 +114,19 @@ impl Plugin for Kotoist {
             | MidiSingleNoteTuningChange
             | MidiKeyBasedInstrumentControl => Yes,
             _ => Maybe,
+        }
+    }
+
+    fn process_events(&mut self, events: &Events) {
+        for e in events.events() {
+            match e {
+                EventEnum::Midi(MidiEvent { data, .. }) => {
+                    if data[0] >= 0x90 || data[0] <= 0x9E {
+                        self.parameters.eval_snippet_at(data[1] as usize);
+                    }
+                }
+                _ => (),
+            }
         }
     }
 
