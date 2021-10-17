@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { FaHammer, FaBroom, FaTh } from "react-icons/fa";
+import { useHotkeys } from "react-hotkeys-hook";
 
 const runsInBrowser = process.env.REACT_APP_IN_BROWSER;
 
@@ -28,8 +29,39 @@ function App() {
     }
   }, [consoleOut, currentPadSelection]);
 
-  const editorDidMount = (editor) => {
+  const clearConsole = () => {
+    setConsoleOut("");
+    if (!runsInBrowser) {
+      window.external.invoke("SEND_CONSOLE_OUT  ");
+    }
+    return null;
+  };
+
+  const evalSelectionOrSnippet = () => {
+    const selection = editorRef.current
+      .getModel()
+      .getValueInRange(editorRef.current.getSelection());
+    if (!runsInBrowser) {
+      const block = selection.length > 0 ? selection : code;
+      window.external.invoke("EVAL_CODE " + block);
+    }
+    return null;
+  };
+
+  useHotkeys("cmd+k", clearConsole);
+
+  const editorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+    editor.addAction({
+      id: "clear-console",
+      label: "Clear Console",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_K],
+      precondition: null,
+      keybindingContext: null,
+      contextMenuGroupId: "navigation",
+      contextMenuOrder: 1.5,
+      run: clearConsole,
+    });
   };
 
   const onPadsSelectionChange = (value) => {
@@ -51,23 +83,6 @@ function App() {
     setPadsVisible(!padsVisible);
   };
 
-  const onClearButtonClick = () => {
-    setConsoleOut("");
-    if (!runsInBrowser) {
-      window.external.invoke("SEND_CONSOLE_OUT ");
-    }
-  };
-
-  const onBuildButtonClick = () => {
-    const selection = editorRef.current
-      .getModel()
-      .getValueInRange(editorRef.current.getSelection());
-    if (!runsInBrowser) {
-      const block = selection.length > 0 ? selection : code;
-      window.external.invoke("EVAL_CODE " + block);
-    }
-  };
-
   return (
     <React.Fragment>
       <div className="editor-container">
@@ -84,8 +99,8 @@ function App() {
       </div>
       <Toolbar
         onTogglePads={onTogglePads}
-        onClear={onClearButtonClick}
-        onBuild={onBuildButtonClick}
+        onClear={clearConsole}
+        onBuild={evalSelectionOrSnippet}
         padSelection={currentPadSelection}
       />
       <Console text={consoleOut} />
