@@ -23,6 +23,8 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::GetConsoleOut => on_get_console_out(&parameters),
             Command::SelectPad => on_select_pad(message, &parameters),
             Command::GetSelectedPad => on_get_selected_pad(&parameters),
+            Command::SetPadName => on_set_pad_name(message, &parameters),
+            Command::GetPadName => on_get_pad_name(message, &parameters),
             Command::Unknown => String::new(),
         }
     })
@@ -88,6 +90,25 @@ fn on_get_selected_pad(parameters: &Parameters) -> String {
     }
 }
 
+fn on_set_pad_name(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::SetPadName.to_string();
+    let pad_json = &message[command_str.len() + 1..];
+    if let Ok(pad) = serde_json::from_str::<Pad>(pad_json) {
+        parameters.set_pad_name(pad);
+    }
+    String::new()
+}
+
+fn on_get_pad_name(message: String, parameters: &Parameters) -> String {
+    let command_str = Command::GetPadName.to_string();
+    let number = &message[command_str.len() + 1..];
+    if let Ok(number) = number.parse::<usize>() {
+        parameters.pad_name_at(number)
+    } else {
+        String::new()
+    }
+}
+
 #[derive(Debug)]
 pub(crate) enum Command {
     SendCode,
@@ -99,6 +120,8 @@ pub(crate) enum Command {
     PostStdout,
     SelectPad,
     GetSelectedPad,
+    GetPadName,
+    SetPadName,
     Unknown,
 }
 
@@ -129,6 +152,8 @@ impl From<&str> for Command {
             "POST_STDOUT" => Self::PostStdout,
             "SELECT_PAD" => Self::SelectPad,
             "GET_SELECTED_PAD" => Self::GetSelectedPad,
+            "GET_PAD_NAME" => Self::GetPadName,
+            "SET_PAD_NAME" => Self::SetPadName,
             _ => Self::Unknown,
         }
     }
@@ -146,6 +171,8 @@ impl ToString for Command {
             Self::PostStdout => "POST_STDOUT".to_string(),
             Self::SelectPad => "SELECT_PAD".to_string(),
             Self::GetSelectedPad => "GET_SELECTED_PAD".to_string(),
+            Self::GetPadName => "GET_PAD_NAME".to_string(),
+            Self::SetPadName => "SET_PAD_NAME".to_string(),
             Self::Unknown => String::new(),
         }
     }

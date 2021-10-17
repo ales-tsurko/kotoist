@@ -140,6 +140,18 @@ function Pad(props) {
   const defaultValue = `snippet ${props.number + 1}`;
   const [name, setName] = useState(defaultValue);
   const noteName = numberToNoteName(props.number);
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      if (!runsInBrowser) {
+        let newName = window.external.invoke(`GET_PAD_NAME ${props.number}`);
+        newName = newName.length > 0 ? newName : defaultValue;
+        setName(newName);
+      }
+    }
+  }, [name, props.number, defaultValue]);
 
   const onMouseDown = () => {
     setIsMouseDown(true);
@@ -155,6 +167,16 @@ function Pad(props) {
 
   const onMouseLeave = () => {
     setIsHover(false);
+  };
+
+  const onChangeName = (event) => {
+    const newName =
+      event.target.value.length > 0 ? event.target.value : defaultValue;
+    setName(newName);
+    if (!runsInBrowser) {
+      const pad = { number: props.number, name: newName };
+      window.external.invoke(`SET_PAD_NAME ${JSON.stringify(pad)}`);
+    }
   };
 
   return (
@@ -174,9 +196,9 @@ function Pad(props) {
         type="text"
         className={`pad-selection ${props.selected ? "pad-selected" : ""}`}
         onClick={() => props.onSelectionChange({ number: props.number, name })}
-        value={props.padName || defaultValue}
+        value={name.length > 0 ? name : defaultValue}
         maxLength={20}
-        onChange={(event) => setName(event.target.value)}
+        onChange={onChangeName}
       />
     </div>
   );

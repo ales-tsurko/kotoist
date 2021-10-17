@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::sync::RwLock;
 
 use koto::{Koto, KotoSettings};
@@ -12,6 +13,7 @@ pub(crate) struct Parameters {
     pub(crate) koto: RwLock<Koto>,
     selected_pad: RwLock<Pad>,
     snippets: RwLock<[String; 128]>,
+    pad_names: RwLock<[String; 128]>,
 }
 
 impl Parameters {
@@ -29,6 +31,22 @@ impl Parameters {
 
     pub(crate) fn selected_pad(&self) -> Pad {
         self.selected_pad.read().unwrap().clone()
+    }
+
+    pub(crate) fn set_pad_name(&self, pad: Pad) {
+        if let Some(host) = self.host {
+            let mut selected = self.selected_pad.write().unwrap();
+            if selected.number == pad.number {
+                selected.name = pad.name.clone();
+            }
+            self.pad_names.write().unwrap()[pad.number] = pad.name;
+            host.update_display(); // notify host that the plugin is changing a parameter
+            host.automate(1, 0.0);
+        }
+    }
+
+    pub(crate) fn pad_name_at(&self, index: usize) -> String {
+        self.pad_names.read().unwrap()[index].clone()
     }
 
     pub(crate) fn set_code(&self, code: &str) {
@@ -95,6 +113,7 @@ impl Default for Parameters {
             host: Default::default(),
             selected_pad: Default::default(),
             snippets: RwLock::new([VAL; 128]),
+            pad_names: RwLock::new([VAL; 128]),
         }
     }
 }
@@ -104,6 +123,7 @@ impl PluginParameters for Parameters {
         let state = State {
             snippets: self.snippets.read().unwrap().to_vec(),
             selection: self.selected_pad.read().unwrap().clone(),
+            pad_names: self.pad_names.read().unwrap().to_vec(),
         };
         bincode::serialize(&state).unwrap_or(Vec::new())
     }
@@ -115,6 +135,7 @@ impl PluginParameters for Parameters {
     fn load_preset_data(&self, data: &[u8]) {
         if let Ok(state) = bincode::deserialize::<State>(data) {
             (*self.snippets.write().unwrap()).clone_from_slice(&state.snippets);
+            (*self.pad_names.write().unwrap()).clone_from_slice(&state.pad_names);
             *self.selected_pad.write().unwrap() = state.selection.clone();
         }
     }
@@ -128,6 +149,7 @@ impl PluginParameters for Parameters {
 struct State {
     snippets: Vec<String>,
     selection: Pad,
+    pad_names: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
