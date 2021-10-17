@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { FaHammer, FaBroom, FaTh } from "react-icons/fa";
 
+const runsInBrowser = process.env.REACT_APP_IN_BROWSER;
+
 function App() {
   const [code, setCode] = useState("");
   const [consoleOut, setConsoleOut] = useState("console output");
@@ -13,14 +15,16 @@ function App() {
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
-      setCode(window.external.invoke("GET_CODE"));
-      setCurrentPadSelection(
-        JSON.parse(window.external.invoke("GET_SELECTED_PAD"))
-      );
-      setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
-      window.addEventListener("SEND_CONSOLE_OUT", (e) =>
-        setConsoleOut(e.detail)
-      );
+      if (!runsInBrowser) {
+        setCode(window.external.invoke("GET_CODE"));
+        setCurrentPadSelection(
+          JSON.parse(window.external.invoke("GET_SELECTED_PAD"))
+        );
+        setConsoleOut(window.external.invoke("GET_CONSOLE_OUT"));
+        window.addEventListener("SEND_CONSOLE_OUT", (e) =>
+          setConsoleOut(e.detail)
+        );
+      }
     }
   }, [consoleOut, currentPadSelection]);
 
@@ -30,13 +34,17 @@ function App() {
 
   const onPadsSelectionChange = (value) => {
     setCurrentPadSelection(value);
-    window.external.invoke(`SELECT_PAD ${JSON.stringify(value)}`);
-    setCode(window.external.invoke("GET_CODE"));
+    if (!runsInBrowser) {
+      window.external.invoke(`SELECT_PAD ${JSON.stringify(value)}`);
+      setCode(window.external.invoke("GET_CODE"));
+    }
   };
 
   const onChange = (newValue) => {
     setCode(newValue);
-    window.external.invoke("SEND_CODE " + newValue);
+    if (!runsInBrowser) {
+      window.external.invoke("SEND_CODE " + newValue);
+    }
   };
 
   const onTogglePads = () => {
@@ -45,15 +53,19 @@ function App() {
 
   const onClearButtonClick = () => {
     setConsoleOut("");
-    window.external.invoke("SEND_CONSOLE_OUT ");
+    if (!runsInBrowser) {
+      window.external.invoke("SEND_CONSOLE_OUT ");
+    }
   };
 
   const onBuildButtonClick = () => {
     const selection = editorRef.current
       .getModel()
       .getValueInRange(editorRef.current.getSelection());
-    const block = selection.length > 0 ? selection : code;
-    window.external.invoke("EVAL_CODE " + block);
+    if (!runsInBrowser) {
+      const block = selection.length > 0 ? selection : code;
+      window.external.invoke("EVAL_CODE " + block);
+    }
   };
 
   return (
@@ -88,9 +100,11 @@ function Pads(props) {
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
-      setSelection(
-        JSON.parse(window.external.invoke("GET_SELECTED_PAD")).number
-      );
+      if (!runsInBrowser) {
+        setSelection(
+          JSON.parse(window.external.invoke("GET_SELECTED_PAD")).number
+        );
+      }
     }
   }, [selection]);
 
@@ -111,7 +125,12 @@ function Pads(props) {
     ));
 
   return (
-    <div className={`pads ${props.visible ? "pads-visible" : ""}`}>{pads}</div>
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className={`pads ${props.visible ? "pads-visible" : ""}`}
+    >
+      {pads}
+    </div>
   );
 }
 
@@ -139,7 +158,7 @@ function Pad(props) {
   };
 
   return (
-    <div className="pad">
+    <div className="pad" onContextMenu={(e) => e.preventDefault()}>
       <div
         className={`pad-button ${
           isHover && !isMouseDown ? "pad-button-hover" : ""
@@ -154,9 +173,7 @@ function Pad(props) {
       <input
         type="text"
         className={`pad-selection ${props.selected ? "pad-selected" : ""}`}
-        onClick={() =>
-          props.onSelectionChange({ number: props.number, name })
-        }
+        onClick={() => props.onSelectionChange({ number: props.number, name })}
         value={props.padName || defaultValue}
         maxLength={20}
         onChange={(event) => setName(event.target.value)}
@@ -168,11 +185,12 @@ function Pad(props) {
 function Toolbar(props) {
   const number = props.padSelection.number;
   const noteName = numberToNoteName(number);
-  const selectionText = number !== null || number !== undefined
-    ? `${number + 1} | ${noteName} | ${props.padSelection.name}`
-    : "";
+  const selectionText =
+    number !== null || number !== undefined
+      ? `${number + 1} | ${noteName} | ${props.padSelection.name}`
+      : "";
   return (
-    <div className="toolbar">
+    <div className="toolbar" onContextMenu={(e) => e.preventDefault()}>
       <label className="toolbar-selection-text">{selectionText}</label>
       <div className="toolbar-buttons-container">
         <button onClick={props.onTogglePads}>
@@ -191,7 +209,11 @@ function Toolbar(props) {
 
 function Console(props) {
   return (
-    <div className="console" dangerouslySetInnerHTML={{ __html: props.text }} />
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="console"
+      dangerouslySetInnerHTML={{ __html: props.text }}
+    />
   );
 }
 
