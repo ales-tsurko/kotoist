@@ -8,12 +8,10 @@ function App() {
   const didMountRef = useRef(false);
   const editorRef = useRef(null);
   const [padsVisible, setPadsVisible] = useState(false);
-  const [currentPadSelection, setCurrentPadSelection] = useState({});
+  const [currentPadSelection, setCurrentPadSelection] = useState(0);
 
   useEffect(() => {
-    if (didMountRef.current) {
-      // window.external.invoke("SEND_CONSOLE_OUT " + consoleOut);
-    } else {
+    if (!didMountRef.current) {
       didMountRef.current = true;
       setCode(window.external.invoke("GET_CODE"));
       setCurrentPadSelection(
@@ -24,7 +22,7 @@ function App() {
         setConsoleOut(e.detail)
       );
     }
-  }, [consoleOut]);
+  }, [consoleOut, currentPadSelection]);
 
   const editorDidMount = (editor) => {
     editorRef.current = editor;
@@ -85,6 +83,16 @@ function App() {
 
 function Pads(props) {
   const [selection, setSelection] = useState(0);
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      setSelection(
+        JSON.parse(window.external.invoke("GET_SELECTED_PAD")).number
+      );
+    }
+  }, [selection]);
 
   const onSelectionChange = (value) => {
     setSelection(value.number);
@@ -112,22 +120,7 @@ function Pad(props) {
   const [isHover, setIsHover] = useState(false);
   const defaultValue = `snippet ${props.number + 1}`;
   const [name, setName] = useState(defaultValue);
-  const pitches = [
-    "C",
-    "C#",
-    "D",
-    "D#",
-    "E",
-    "F",
-    "F#",
-    "G",
-    "G#",
-    "A",
-    "A#",
-    "B",
-  ];
-  const noteName =
-    pitches[props.number % pitches.length] + Math.floor(props.number / 12);
+  const noteName = numberToNoteName(props.number);
 
   const onMouseDown = () => {
     setIsMouseDown(true);
@@ -162,7 +155,7 @@ function Pad(props) {
         type="text"
         className={`pad-selection ${props.selected ? "pad-selected" : ""}`}
         onClick={() =>
-          props.onSelectionChange({ number: props.number, noteName, name })
+          props.onSelectionChange({ number: props.number, name })
         }
         value={props.padName || defaultValue}
         maxLength={20}
@@ -173,9 +166,10 @@ function Pad(props) {
 }
 
 function Toolbar(props) {
-  const selectionText = props.padSelection.noteName
-    ? `${props.padSelection.number + 1} | \
-  ${props.padSelection.noteName} | ${props.padSelection.name}`
+  const number = props.padSelection.number;
+  const noteName = numberToNoteName(number);
+  const selectionText = number !== null || number !== undefined
+    ? `${number + 1} | ${noteName} | ${props.padSelection.name}`
     : "";
   return (
     <div className="toolbar">
@@ -199,6 +193,25 @@ function Console(props) {
   return (
     <div className="console" dangerouslySetInnerHTML={{ __html: props.text }} />
   );
+}
+
+function numberToNoteName(number) {
+  const pitches = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ];
+
+  return pitches[number % pitches.length] + Math.floor(number / 12);
 }
 
 export default App;
