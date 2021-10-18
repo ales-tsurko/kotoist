@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { FaHammer, FaBroom, FaTh } from "react-icons/fa";
 import { useHotkeys } from "react-hotkeys-hook";
+import KotoistTheme from "./kotoist-theme.json";
 
 const runsInBrowser = process.env.REACT_APP_IN_BROWSER;
 
@@ -62,6 +63,8 @@ function App() {
       contextMenuOrder: 1.5,
       run: clearConsole,
     });
+    monaco.editor.defineTheme('kotoist', KotoistTheme);
+    monaco.editor.setTheme('kotoist');
   };
 
   const onPadsSelectionChange = (value) => {
