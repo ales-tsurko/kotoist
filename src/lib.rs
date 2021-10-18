@@ -25,13 +25,14 @@ use std::sync::{Arc, Mutex, Once};
 
 use log::{info, LevelFilter};
 
+use koto_random::make_module as make_random_module;
 use vst::api::{Event, Events, Supported};
 use vst::event::{Event as EventEnum, MidiEvent};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
 use editor::{command::Command, KotoistEditor};
-use parameters::{Parameters, Event as ParametersEvent};
+use parameters::{Event as ParametersEvent, Parameters};
 use pattern::{make_module, Orchestrator};
 
 #[cfg(debug_assertions)]
@@ -56,12 +57,9 @@ impl Plugin for Kotoist {
             host.clone(),
             Arc::clone(&parameters),
         )));
-        parameters
-            .koto
-            .write()
-            .unwrap()
-            .prelude()
-            .add_map("pattern", make_module(Arc::clone(&orchestrator)));
+        let mut prelude = parameters.koto.write().unwrap().prelude();
+        prelude.add_map("pattern", make_module(Arc::clone(&orchestrator)));
+        prelude.add_value("random", make_random_module());
 
         parameters.eval_code("from pattern import midi_out, print_scales");
         parameters.eval_code(KOTO_LIB_CODE);
