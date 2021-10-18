@@ -26,7 +26,7 @@ pub(crate) fn make_dispatcher(parameters: Arc<Parameters>) -> JavascriptCallback
             Command::GetSelectedPad => on_get_selected_pad(&parameters),
             Command::SetPadName => on_set_pad_name(message, &parameters),
             Command::GetPadName => on_get_pad_name(message, &parameters),
-            Command::Unknown => String::new(),
+            _ => String::new(),
         }
     })
 }
@@ -133,6 +133,7 @@ pub(crate) enum Command {
     GetSelectedPad,
     GetPadName,
     SetPadName,
+    NoteOn,
     Unknown,
 }
 
@@ -166,6 +167,7 @@ impl From<&str> for Command {
             "GET_SELECTED_PAD" => Self::GetSelectedPad,
             "GET_PAD_NAME" => Self::GetPadName,
             "SET_PAD_NAME" => Self::SetPadName,
+            "NOTE_ON" => Self::NoteOn,
             _ => Self::Unknown,
         }
     }
@@ -186,6 +188,7 @@ impl ToString for Command {
             Self::GetSelectedPad => "GET_SELECTED_PAD".to_string(),
             Self::GetPadName => "GET_PAD_NAME".to_string(),
             Self::SetPadName => "SET_PAD_NAME".to_string(),
+            Self::NoteOn => "NOTE_ON".to_string(),
             Self::Unknown => String::new(),
         }
     }

@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::collections::VecDeque;
 use std::sync::RwLock;
 
 use koto::{Koto, KotoSettings};
@@ -6,14 +6,16 @@ use serde::{Deserialize, Serialize};
 use vst::host::Host;
 use vst::plugin::{HostCallback, PluginParameters};
 
+use crate::editor::command::Command;
+
 pub(crate) struct Parameters {
     pub(crate) console_out: RwLock<String>,
     host: Option<HostCallback>,
-    pub(crate) is_console_changed: RwLock<bool>,
     pub(crate) koto: RwLock<Koto>,
     selected_pad: RwLock<Pad>,
     snippets: RwLock<[String; 128]>,
     pad_names: RwLock<[String; 128]>,
+    pub(crate) event_queue: RwLock<VecDeque<Event>>,
 }
 
 impl Parameters {
@@ -93,10 +95,17 @@ impl Parameters {
         self.append_console(&format!("<span class=\"ok\">{}</span>", out));
     }
 
+    pub(crate) fn push_event(&self, event: Event) {
+        (*self.event_queue.write().unwrap()).push_back(event);
+    }
+
     pub(crate) fn append_console(&self, out: &str) {
         let mut console_out = self.console_out.write().unwrap();
         console_out.push_str(out);
-        *self.is_console_changed.write().unwrap() = true;
+        self.push_event(Event {
+            command: Command::SendConsoleOut,
+            value: console_out.clone(),
+        });
     }
 }
 
@@ -112,12 +121,12 @@ impl Default for Parameters {
         // ..Default::default() calls it recursively, so we call it for each field separatelly
         Self {
             koto: RwLock::new(koto),
-            is_console_changed: Default::default(),
             console_out: Default::default(),
             host: Default::default(),
             selected_pad: Default::default(),
             snippets: RwLock::new([VAL; 128]),
             pad_names: RwLock::new([VAL; 128]),
+            event_queue: Default::default(),
         }
     }
 }
@@ -147,6 +156,11 @@ impl PluginParameters for Parameters {
     fn load_bank_data(&self, data: &[u8]) {
         self.load_preset_data(data);
     }
+}
+
+pub(crate) struct Event {
+    pub(crate) command: Command,
+    pub(crate) value: String,
 }
 
 #[derive(Deserialize, Serialize)]

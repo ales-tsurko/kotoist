@@ -63,8 +63,8 @@ function App() {
       contextMenuOrder: 1.5,
       run: clearConsole,
     });
-    monaco.editor.defineTheme('kotoist', KotoistTheme);
-    monaco.editor.setTheme('kotoist');
+    monaco.editor.defineTheme("kotoist", KotoistTheme);
+    monaco.editor.setTheme("kotoist");
   };
 
   const onPadsSelectionChange = (value) => {
@@ -122,6 +122,9 @@ function Pads(props) {
       if (!runsInBrowser) {
         setSelection(
           JSON.parse(window.external.invoke("GET_SELECTED_PAD")).number
+        );
+        window.addEventListener("NOTE_ON", (e) =>
+          setClickedPad(parseInt(e.detail))
         );
       }
     }
@@ -209,9 +212,9 @@ function Pad(props) {
 
   return (
     <div
-      className={`pad ${
-        props.selected ? "pad-selected" : ""
-      } ${props.playing ? "pad-playing" : ""}`}
+      className={`pad ${props.selected ? "pad-selected" : ""} ${
+        props.playing ? "pad-playing" : ""
+      }`}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div

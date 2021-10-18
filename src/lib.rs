@@ -30,8 +30,8 @@ use vst::event::{Event as EventEnum, MidiEvent};
 use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
 use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
 
-use editor::KotoistEditor;
-use parameters::Parameters;
+use editor::{command::Command, KotoistEditor};
+use parameters::{Parameters, Event as ParametersEvent};
 use pattern::{make_module, Orchestrator};
 
 #[cfg(debug_assertions)]
@@ -121,8 +121,12 @@ impl Plugin for Kotoist {
         for e in events.events() {
             match e {
                 EventEnum::Midi(MidiEvent { data, .. }) => {
-                    if data[0] >= 0x90 || data[0] <= 0x9E {
+                    if data[0] >= 0x90 || data[0] <= 0x9E && data[2] > 0 {
                         self.parameters.eval_snippet_at(data[1] as usize);
+                        self.parameters.push_event(ParametersEvent {
+                            command: Command::NoteOn,
+                            value: format!("{}", data[1]),
+                        });
                     }
                 }
                 _ => (),

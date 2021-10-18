@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 use vst::editor::{Editor, KeyCode, KnobMode};
 use vst_gui::PluginGui;
 
-use self::command::{make_dispatcher, Command};
+use self::command::make_dispatcher;
 use crate::parameters::Parameters;
 
 const HTML: &'static str = include_str!("../gui/build/index.html");
@@ -50,11 +50,11 @@ impl Editor for KotoistEditor {
 
         gui.idle();
 
-        if *self.parameters.is_console_changed.read().unwrap() {
-            let console_out = self.parameters.console_out.read().unwrap();
-            gui.execute(&Command::SendConsoleOut.to_js_event(&console_out))
-                .unwrap();
-            *self.parameters.is_console_changed.write().unwrap() = false;
+        // process events
+        if let Some(event) = self.parameters.event_queue.write().unwrap().pop_front() {
+            let value = event.value;
+            let command = event.command;
+            gui.execute(&command.to_js_event(&value)).unwrap();
         }
     }
 
