@@ -57,9 +57,9 @@ the [SuperCollider](https://supercollider.github.io/) programming language.
 
 ## Repetition Patterns
 
-- pclutch - sample and hold a pattern
-- pconst - constrain the sum of a value pattern
-- pdup - repeat input stream values
-- pn - repeatedly embed a pattern
-- pstutter - repeat input stream values
-- psubdivide - partition a value into n equal subdivisions
+- [pclutch](patterns/repetiotion#pclutch-2) - sample and hold a pattern
+- [pconst](patterns/repetiotion#pconst-3) - constrain the sum of a value pattern
+- [pdup](patterns/repetiotion#pdup-4) - repeat input stream values
+- [pn](patterns/repetiotion#pn-5) - repeatedly embed a pattern
+- [psubdivide](patterns/repetiotion#psubdivide-7) - partition a value into n
+  equal subdivisions
