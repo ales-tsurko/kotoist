@@ -1,0 +1,307 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Utility API</title>
+    <meta name="description" content="Documentation for Kotoist">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/assets/normalize.css?v=1634751359" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/assets/doctave-style.css?v=1634751359" media="screen" />
+
+    <link rel="stylesheet" type="text/css" href="/assets/prism-ghcolors.css?v=1634751359" media="screen" />
+
+    
+
+    <script>
+    var DOCTAVE_TIMESTAMP = "1634751359";
+    var color = localStorage.getItem('doctave-color')
+
+    if (color === 'dark') {
+        document.getElementsByTagName('html')[0].classList.remove('light');
+        document.getElementsByTagName('html')[0].classList.add('dark');
+    } else {
+        document.getElementsByTagName('html')[0].classList.remove('dark');
+        document.getElementsByTagName('html')[0].classList.add('light');
+    }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <h2 class='project-name'>
+                    <a href='/'>
+                        Kotoist
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a href="/patterns">Patterns Library</a></li>
+            
+                <ul>
+    
+        <li><a href="/patterns/list">List Patterns</a></li>
+        
+    
+        <li><a href="/patterns/random">Random Patterns</a></li>
+        
+    
+        <li><a href="/patterns/repetition">Repetition Patterns</a></li>
+        
+    
+</ul>
+
+            
+        
+            <li><a class="active" href="/utility">Utility API</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='content'>
+                <h1 id="utility-api-1">Utility API</h1>
+<h2 id="midi_out-2">midi_out</h2>
+<p>Plays the pattern.</p>
+<pre><code class="language-coffee">midi_out {}, 4
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>pattern</td><td>The pattern to play.</td><td></td></tr>
+<tr><td>quantization</td><td>The quantization in beats.</td><td></td></tr>
+</tbody></table>
+<p>The <strong>pattern</strong> is a map with optional values:</p>
+<ul>
+<li><code>dur</code> - note duration</li>
+<li><code>length</code> - note length</li>
+<li><code>degree</code> - step in the scale</li>
+<li><code>scale</code> - case-insensitive, to view available scales execute <code>print_scales</code>
+function</li>
+<li><code>root</code> - root note</li>
+<li><code>transpose</code> - simple transpose</li>
+<li><code>mtranspose</code> - transpose relating to the scale</li>
+<li><code>octave</code> - octave number (from 0)</li>
+<li><code>channel</code> - MIDI channel number</li>
+<li><code>amp</code> - amplitude (from 0.0 to 1.0)</li>
+</ul>
+<h2 id="print_scales-3">print_scales</h2>
+<p>Prints all available scales to the console.</p>
+<h2 id="as_iter-4">as_iter</h2>
+<p>Converts any value into an iterator.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Any value.</td><td></td></tr>
+</tbody></table>
+<h2 id="rrand-5">rrand</h2>
+<p>Returns a random number between two values.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>low</td><td>Low value (a number).</td><td></td></tr>
+<tr><td>high</td><td>High value (a number).</td><td></td></tr>
+</tbody></table>
+<h2 id="exprand-6">exprand</h2>
+<p>Returns a random number between two values exponentially.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>low</td><td>Low value (a number).</td><td></td></tr>
+<tr><td>high</td><td>High value (a number).</td><td></td></tr>
+</tbody></table>
+<h2 id="number.rand-7">number.rand</h2>
+<p>Returns a random value between 0 and the number.</p>
+<h2 id="number.rand2-8">number.rand2</h2>
+<p>Returns a random number between the negative number and the number.</p>
+<h2 id="number.fold-9">number.fold</h2>
+<p>Folds the number between two values.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>low</td><td>Low value (a number).</td><td></td></tr>
+<tr><td>high</td><td>High value (a number).</td><td></td></tr>
+</tbody></table>
+<h2 id="number.round-10">number.round</h2>
+<p>Round the number regarding to given quantization.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>quantization</td><td>A number.</td><td></td></tr>
+</tbody></table>
+<h2 id="number.sign-11">number.sign</h2>
+<p>Returns the sign of the number.</p>
+<h2 id="number.wrap-12">number.wrap</h2>
+<p>Wraps the number between two values.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>low</td><td>Low value (a number).</td><td></td></tr>
+<tr><td>high</td><td>High value (a number).</td><td></td></tr>
+</tbody></table>
+<h2 id="list.scramble-13">list.scramble</h2>
+<p>Scrambles the list.</p>
+<h2 id="list.windex-14">list.windex</h2>
+<p>Interprets the list's values as normalized probabilities and randomly returns an
+index with the given probabilities.</p>
+<h2 id="list.normalize_sum-15">list.normalize_sum</h2>
+<p>Recalculates the values in the list and returns the list with the values sum
+equal to 1.0.</p>
+<h2 id="iterator.add-16">iterator.add</h2>
+<p>Perform addition between the iterator and another iterator or a number.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Iterator or number.</td><td></td></tr>
+</tbody></table>
+<h2 id="iterator.sub-17">iterator.sub</h2>
+<p>Perform subtraction between the iterator and another iterator or a number.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Iterator or number.</td><td></td></tr>
+</tbody></table>
+<h2 id="iterator.mul-18">iterator.mul</h2>
+<p>Perform multiplication between the iterator and another iterator or a number.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Iterator or number.</td><td></td></tr>
+</tbody></table>
+<h2 id="iterator.div-19">iterator.div</h2>
+<p>Perform division between the iterator and another iterator or a number.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Iterator or number.</td><td></td></tr>
+</tbody></table>
+<h2 id="iterator.mod-20">iterator.mod</h2>
+<p>Perform the modulo operation between the iterator and another iterator or a
+number.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>value</td><td>Iterator or number.</td><td></td></tr>
+</tbody></table>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                            <li class='page-nav-level-1'>
+                                <a href='#utility-api-1'>Utility API</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#midi_out-2'>midi_out</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#print_scales-3'>print_scales</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#as_iter-4'>as_iter</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#rrand-5'>rrand</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#exprand-6'>exprand</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.rand-7'>number.rand</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.rand2-8'>number.rand2</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.fold-9'>number.fold</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.round-10'>number.round</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.sign-11'>number.sign</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#number.wrap-12'>number.wrap</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#list.scramble-13'>list.scramble</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#list.windex-14'>list.windex</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#list.normalize_sum-15'>list.normalize_sum</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#iterator.add-16'>iterator.add</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#iterator.sub-17'>iterator.sub</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#iterator.mul-18'>iterator.mul</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#iterator.div-19'>iterator.div</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#iterator.mod-20'>iterator.mod</a>
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35" d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.5" d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.2" d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/assets/mermaid.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/elasticlunr.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/doctave-app.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/prism.js?v=1634751359"></script>
+</body>
+
+</html>

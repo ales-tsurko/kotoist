@@ -1,0 +1,233 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Repetition Patterns</title>
+    <meta name="description" content="Documentation for Kotoist">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/assets/normalize.css?v=1634751359" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/assets/doctave-style.css?v=1634751359" media="screen" />
+
+    <link rel="stylesheet" type="text/css" href="/assets/prism-ghcolors.css?v=1634751359" media="screen" />
+
+    
+
+    <script>
+    var DOCTAVE_TIMESTAMP = "1634751359";
+    var color = localStorage.getItem('doctave-color')
+
+    if (color === 'dark') {
+        document.getElementsByTagName('html')[0].classList.remove('light');
+        document.getElementsByTagName('html')[0].classList.add('dark');
+    } else {
+        document.getElementsByTagName('html')[0].classList.remove('dark');
+        document.getElementsByTagName('html')[0].classList.add('light');
+    }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <h2 class='project-name'>
+                    <a href='/'>
+                        Kotoist
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a href="/patterns">Patterns Library</a></li>
+            
+                <ul>
+    
+        <li><a href="/patterns/list">List Patterns</a></li>
+        
+    
+        <li><a href="/patterns/random">Random Patterns</a></li>
+        
+    
+        <li><a class="active" href="/patterns/repetition">Repetition Patterns</a></li>
+        
+    
+</ul>
+
+            
+        
+            <li><a href="/utility">Utility API</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='content'>
+                <h1 id="repetition-patterns-1">Repetition Patterns</h1>
+<h2 id="pclutch-2">pclutch</h2>
+<p>Sample and hold a pattern.</p>
+<pre><code class="language-coffee">pattern = pclutch pseq([0,1,2,3], 2), pseq([true, true, false], 3)
+expected = [0, 1, 1, 2, 3, 3, 0, 1, 1, ()]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>pattern</td><td></td><td></td></tr>
+<tr><td>connected</td><td>If <code>true</code>, the pattern plays as usual, if <code>false</code>, the previous value is kept.</td><td>true</td></tr>
+</tbody></table>
+<h2 id="pconst-3">pconst</h2>
+<p>Embeds elements of the pattern into the stream until the sum comes close enough
+to sum. At that point, the difference between the specified sum and the actual
+running sum is embedded.</p>
+<pre><code class="language-coffee">pattern = pconst 5, pseq([1,2,0.5,0.1], 2)
+expected = [1, 2, 0.5, 0.1, 1, 0.40000000000000036, ()]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>sum</td><td></td><td></td></tr>
+<tr><td>pattern</td><td></td><td></td></tr>
+<tr><td>tollerance</td><td></td><td>0.001</td></tr>
+</tbody></table>
+<h2 id="pdup-4">pdup</h2>
+<p>Repeat each element n times.</p>
+<pre><code class="language-coffee">pattern = pdup 5, pseq([42,27], inf)
+expected = [42,42,42,42,42]
+
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>n</td><td></td><td></td></tr>
+<tr><td>pattern</td><td></td><td></td></tr>
+</tbody></table>
+<h2 id="pn-5">pn</h2>
+<p>Repeatedly embed a pattern.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>pattern</td><td>The pattern to repeat.</td><td></td></tr>
+<tr><td>repeats</td><td>Repeats the enclosed pattern repeats times.</td><td>infinity</td></tr>
+</tbody></table>
+<h2 id="psubdivide-6">psubdivide</h2>
+<p>Subdivides each duration by each subdivision and yields that value n times. A
+subdivision of 0 will skip the duration value, a subdivision of 1 yields the
+duration value unaffected.</p>
+<pre><code class="language-coffee">pattern = psubdivide(
+  pseq([1,1,1,1,1,2,2,2,2,2,0,1,3,4,0], inf),
+  pseq([0.5, 1, 2, 0.25,0.25],inf)
+)
+expected = [
+  0.5,
+  1,
+  2,
+  0.25,
+  0.25,
+  0.25,
+  0.25,
+  0.5,
+  0.5,
+  1.0,
+  1.0,
+  0.125,
+  0.125,
+  0.125,
+  0.125,
+  1,
+  0.6666666666666666,
+  0.6666666666666666,
+  0.6666666666666666,
+  0.0625
+]
+for item in expected
+  assert_near pattern.next(), item, 0.00001
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>n</td><td></td><td></td></tr>
+<tr><td>pattern</td><td></td><td></td></tr>
+</tbody></table>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                            <li class='page-nav-level-1'>
+                                <a href='#repetition-patterns-1'>Repetition Patterns</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pclutch-2'>pclutch</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pconst-3'>pconst</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pdup-4'>pdup</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pn-5'>pn</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#psubdivide-6'>psubdivide</a>
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35" d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.5" d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.2" d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/assets/mermaid.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/elasticlunr.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/doctave-app.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/prism.js?v=1634751359"></script>
+</body>
+
+</html>

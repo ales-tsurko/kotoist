@@ -1,0 +1,450 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>List Patterns</title>
+    <meta name="description" content="Documentation for Kotoist">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/assets/normalize.css?v=1634751359" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/assets/doctave-style.css?v=1634751359" media="screen" />
+
+    <link rel="stylesheet" type="text/css" href="/assets/prism-ghcolors.css?v=1634751359" media="screen" />
+
+    
+
+    <script>
+    var DOCTAVE_TIMESTAMP = "1634751359";
+    var color = localStorage.getItem('doctave-color')
+
+    if (color === 'dark') {
+        document.getElementsByTagName('html')[0].classList.remove('light');
+        document.getElementsByTagName('html')[0].classList.add('dark');
+    } else {
+        document.getElementsByTagName('html')[0].classList.remove('dark');
+        document.getElementsByTagName('html')[0].classList.add('light');
+    }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <h2 class='project-name'>
+                    <a href='/'>
+                        Kotoist
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a href="/patterns">Patterns Library</a></li>
+            
+                <ul>
+    
+        <li><a class="active" href="/patterns/list">List Patterns</a></li>
+        
+    
+        <li><a href="/patterns/random">Random Patterns</a></li>
+        
+    
+        <li><a href="/patterns/repetition">Repetition Patterns</a></li>
+        
+    
+</ul>
+
+            
+        
+            <li><a href="/utility">Utility API</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='content'>
+                <h1 id="list-patterns-1">List Patterns</h1>
+<h2 id="pfsm-2">pfsm</h2>
+<p>Every state consists of an item and an array of integer indices of possible
+<strong>next states</strong>. The initial state is chosen at random from the array of 
+<strong>entry states</strong>.  That chosen state's item is returned, and the next state is
+chosen from its array of possible <strong>next states</strong>. When the end state is chosen,
+the stream ends.</p>
+<pre><code class="language-coffee">random.seed(1)
+pattern = pfsm([
+    [0,1],
+    67, [0, 0, 3],
+    72, [2],
+    73, [0, 2],
+    pseq([74, 75, 76, 77]), [2, 3, 3],
+    (), ()], inf)
+expected = [72,73,73,73,73,73,73,67,67,67,67,74,75,76,77,73,73,73,67,73]
+
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pindex-3">pindex</h2>
+<p>Pattern that indexes into an array.</p>
+<pre><code class="language-coffee">pattern = pindex(
+  [7, 13, 12, 2, 2, 2, 5], 
+  pseq([0, 0, 2, 0, 4, 6, 7], inf), 
+  inf)
+expected = [7, 7, 12, 7, 2, 5, 7]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>index</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pswitch-4">pswitch</h2>
+<p>pswitch chooses elements from the <strong>list</strong> by a stream of indices (<strong>which</strong>)
+and embeds them in the stream. If the element is itself a pattern, it first
+completely embeds it before looking for the next index.</p>
+<pre><code class="language-coffee">a = pseq [1, 2, 3], 2
+b = pseq [65, 76]
+pattern = pswitch [a, b, 800], pseq([2, 2, 0, 1], inf)
+expected = [800,800,1,2,3,1,2,3,65,76,800,800]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>which</td><td></td><td>0</td></tr>
+</tbody></table>
+<h2 id="pclump-5">pclump</h2>
+<p>Groups the source pattern into arrays whose size is given by n.</p>
+<p>E.g. If the source pattern has 5 elements and you choose a clump size of 2, the
+new pattern will return two arrays containing 2 elements and a final array
+containing 1 element.</p>
+<pre><code class="language-coffee">pattern = pclump 2, pseq([1,2,3])
+expected = [[1,2], [3], ()]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>n</td><td>An integer, or a pattern that returns an integer. This integer will determine the size of the next clump.</td><td></td></tr>
+<tr><td>pattern</td><td>The pattern to be filtered.</td><td></td></tr>
+</tbody></table>
+<h2 id="pgeom-6">pgeom</h2>
+<p>Returns an iterator that behaves like a geometric series.</p>
+<pre><code class="language-coffee">pattern = pgeom 1, 1.1
+expected = [
+  1,
+  1.1,
+  1.2100000000000002,
+  1.3310000000000004,
+  1.4641000000000006,
+  1.6105100000000008,
+  1.771561000000001,
+  1.9487171000000014,
+  2.1435888100000016,
+  2.357947691000002,
+  2.5937424601000023,
+  2.853116706110003,
+  3.1384283767210035,
+  3.4522712143931042,
+  3.797498335832415,
+  4.177248169415656,
+  4.594972986357222,
+  5.054470284992944,
+  5.559917313492239,
+  6.115909044841463
+]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>start</td><td>Start value.</td><td>0</td></tr>
+<tr><td>grow</td><td>Multiplication factor.</td><td>1</td></tr>
+<tr><td>length</td><td>Number of values produced.</td><td>infinity</td></tr>
+</tbody></table>
+<h2 id="place-7">place</h2>
+<p>Returns elements in the list. If an element is a list itself, it embeds the
+first element when it comes by first time, the second element when it comes by
+the second time... The nth when it comes by the nth time.</p>
+<pre><code class="language-coffee">pattern = place [1, [2, 5], [3, 6]], inf
+expected = [1,2,3,1,5,6,1,2]
+for item in expected
+  assert_eq pattern.next(), item
+
+pattern = place(
+  [1, pseq([2, 5], inf), pseq([3, 6], inf)], inf)
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+</tbody></table>
+<h2 id="prand-8">prand</h2>
+<p>Embed one item from the list at random for each repeat.</p>
+<pre><code class="language-coffee">pattern = prand (0..10).to_list(), inf
+expected = [6,1,5,4,9,6,4,6,6,8,2,2,8,4,0,7,6,1,7,5]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pseq-9">pseq</h2>
+<p>Cycles over a list of values. The repeats variable gives the number of times to
+repeat the entire list.</p>
+<pre><code class="language-coffee">pattern = pseq [0,1,2], inf
+expected = [0,1,2,0,1]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+<tr><td>offset</td><td></td><td>0</td></tr>
+</tbody></table>
+<h2 id="pser-10">pser</h2>
+<p>is like pseq, however the repeats variable gives the number of items returned
+instead of the number of complete cycles.</p>
+<pre><code class="language-coffee">pattern = pser [1, 2, 3], 5
+expected = [1, 2, 3, 1, 2, ()]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats</td><td>1</td></tr>
+<tr><td>offset</td><td></td><td>0</td></tr>
+</tbody></table>
+<h2 id="pseries-11">pseries</h2>
+<p>Returns a stream that behaves like an arithmetic series.</p>
+<pre><code class="language-coffee">pattern = pseries 300, 20, 20
+expected = [
+  300,
+  320,
+  340,
+  360,
+  380,
+  400,
+  420,
+  440,
+  460,
+  480,
+  500,
+  520,
+  540,
+  560,
+  580,
+  600,
+  620,
+  640,
+  660,
+  680
+]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>start</td><td>Start value.</td><td>0</td></tr>
+<tr><td>step</td><td>Addition factor.</td><td>1</td></tr>
+<tr><td>length</td><td>Number of values produced.</td><td>infinity</td></tr>
+</tbody></table>
+<h2 id="pshuf-12">pshuf</h2>
+<p>Returns a shuffled version of the <strong>list</strong> item by item, with n <strong>repeats</strong>.</p>
+<pre><code class="language-coffee">pattern = pshuf (1..5).to_list(), 3
+expected = [3,1,4,2,3,1,4,2,3,1,4,2,()]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats.</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pslide-13">pslide</h2>
+<p>Slide over a list of values and embed them.</p>
+<pre><code class="language-coffee">pattern = pslide [1, 2, 3, 4, 5], inf
+expected = [1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 1, 5, 1, 2, 1, 2, 3, 2, 3]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of segments.</td><td>1</td></tr>
+<tr><td>step</td><td>How far to step the start of each segment from previous. step can be negative.</td><td>3</td></tr>
+<tr><td>start</td><td>What index to start at.</td><td>0</td></tr>
+<tr><td>wrap_at_end</td><td>If true (default), indexing wraps around if goes past beginning or end. If false, the pattern stops if it hits a nil element or goes outside the list bounds.</td><td>true</td></tr>
+</tbody></table>
+<h2 id="ptuple-14">ptuple</h2>
+<p>At each iteration, ptuple returns a tuple (array) combining the output of each
+of the patterns in the list. When any of the patterns returns a nil, ptuple ends
+that 'repeat' and restarts all of the streams.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats.</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pwalk-15">pwalk</h2>
+<p>A one-dimensional random walk over a list of values that are embedded.</p>
+<pre><code class="language-coffee">pattern = pwalk(
+  [1, 2, 3, 4, 5, 6, 7], 
+  pseq([1], inf), 
+  pseq([1, -1], inf) 
+)
+expected = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 2, 3, 4, 5, 6, 7, 6]
+for item in expected
+  assert_eq pattern.next(), item
+</code></pre>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td>The items to be walked over.</td><td></td></tr>
+<tr><td>step_pattern</td><td>Returns integers that will be used to increment the index into list.</td><td>1</td></tr>
+<tr><td>direction_pattern</td><td>Used to determine the behavior at boundaries: 1 means forward, -1 means backward.</td><td>1</td></tr>
+<tr><td>start_pos</td><td>Where to start in the list.</td><td>0</td></tr>
+</tbody></table>
+<h2 id="pwrand-16">pwrand</h2>
+<p>Returns one item from the list at random for each repeat, the probability for
+each item is determined by a list of weights which should sum to 1.0.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>weights</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats.</td><td>1</td></tr>
+</tbody></table>
+<h2 id="pxrand-17">pxrand</h2>
+<p>Like prand, returns one item from the list at random for each repeat, but pxrand
+never repeats the same element twice in a row.</p>
+<table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td>list</td><td></td><td></td></tr>
+<tr><td>repeats</td><td>Number of repeats.</td><td>1</td></tr>
+</tbody></table>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                            <li class='page-nav-level-1'>
+                                <a href='#list-patterns-1'>List Patterns</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pfsm-2'>pfsm</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pindex-3'>pindex</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pswitch-4'>pswitch</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pclump-5'>pclump</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pgeom-6'>pgeom</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#place-7'>place</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#prand-8'>prand</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pseq-9'>pseq</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pser-10'>pser</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pseries-11'>pseries</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pshuf-12'>pshuf</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pslide-13'>pslide</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#ptuple-14'>ptuple</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pwalk-15'>pwalk</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pwrand-16'>pwrand</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#pxrand-17'>pxrand</a>
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35" d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.5" d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.2" d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/assets/mermaid.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/elasticlunr.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/doctave-app.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/prism.js?v=1634751359"></script>
+</body>
+
+</html>

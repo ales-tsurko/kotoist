@@ -1,0 +1,194 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Patterns Library</title>
+    <meta name="description" content="Documentation for Kotoist">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="/assets/normalize.css?v=1634751359" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/assets/doctave-style.css?v=1634751359" media="screen" />
+
+    <link rel="stylesheet" type="text/css" href="/assets/prism-ghcolors.css?v=1634751359" media="screen" />
+
+    
+
+    <script>
+    var DOCTAVE_TIMESTAMP = "1634751359";
+    var color = localStorage.getItem('doctave-color')
+
+    if (color === 'dark') {
+        document.getElementsByTagName('html')[0].classList.remove('light');
+        document.getElementsByTagName('html')[0].classList.add('dark');
+    } else {
+        document.getElementsByTagName('html')[0].classList.remove('dark');
+        document.getElementsByTagName('html')[0].classList.add('light');
+    }
+    </script>
+
+    
+</head>
+
+<body>
+    <label for='menu-toggle-switch' class='menu-toggle-button'>
+        ☰
+    </label>
+    <input type="checkbox" id="menu-toggle-switch" value='0' />
+    <div class='page'>
+        <div class='header'>
+            <div class='logo'>
+                
+                <h2 class='project-name'>
+                    <a href='/'>
+                        Kotoist
+                    </a>
+                </h2>
+            </div>
+            <div class='search'>
+                <form id='search-form'>
+    <input type='text' id='search-box' autocomplete="off" placeholder="Search..."></input>
+    <span class='search-icon'>S</span>
+    <ul id='search-results'></ul>
+</form>
+
+            </div>
+            <div class='header-dummy-right'>
+            </div>
+        </div>
+        <div class='container'>
+            <div class='sidebar-left'>
+                <nav class='site-nav'>
+    <ul>
+        
+            <li><a class="active" href="/patterns">Patterns Library</a></li>
+            
+                <ul>
+    
+        <li><a href="/patterns/list">List Patterns</a></li>
+        
+    
+        <li><a href="/patterns/random">Random Patterns</a></li>
+        
+    
+        <li><a href="/patterns/repetition">Repetition Patterns</a></li>
+        
+    
+</ul>
+
+            
+        
+            <li><a href="/utility">Utility API</a></li>
+            
+        
+    </ul>
+    <span id='light-dark-mode-switch'>
+        <svg xmlns="http://www.w3.org/2000/svg" id="dark-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+
+        <svg xmlns="http://www.w3.org/2000/svg" id="light-mode-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </span>
+</nav>
+
+            </div>
+            <div class='content'>
+                <h1 id="patterns-library-1">Patterns Library</h1>
+<p>Currently, the patterns library contains only the patterns ported from
+the <a href="https://supercollider.github.io/">SuperCollider</a> programming language.</p>
+<h2 id="list-patterns-2">List Patterns</h2>
+<ul>
+<li><a href="patterns/list#pfsm-2">pfsm</a> - Finite State Machine</li>
+<li><a href="patterns/list#pindex-3">pindex</a> - pattern that indexes into an array</li>
+<li><a href="patterns/list#pswitch-4">pswitch</a> - embed values in a list according to a
+pattern of indices</li>
+<li><a href="patterns/list#pclump-5">pclump</a> - a pattern that takes another pattern and
+groups its values into arrays</li>
+<li><a href="patterns/list#pgeom-6">pgeom</a> - geometric series pattern</li>
+<li><a href="patterns/list#place-7">place</a> - interlaced embedding of subarrays</li>
+<li><a href="patterns/list#prand-9">prand</a> - embed values randomly chosen from a list</li>
+<li><a href="patterns/list#pseq-10">pseq</a> - sequentially embed values in a list</li>
+<li><a href="patterns/list#pser-11">pser</a> - sequentially embed values in a list</li>
+<li><a href="patterns/list#pseries-12">pseries</a> - arithmetic series pattern</li>
+<li><a href="patterns/list#pshuf-13">pshuf</a> - sequentially embed values in a list in
+constant, but random order</li>
+<li><a href="patterns/list#pslide-14">pslide</a> - slide over a list of values and embed them</li>
+<li><a href="patterns/list#ptuple-15">ptuple</a> - combine a list of streams to a stream of lists</li>
+<li><a href="patterns/list#pwalk-16">pwalk</a> - a one-dimensional random walk over a list of
+values that are embedded</li>
+<li><a href="patterns/list#pwrand-17">pwrand</a> - embed values randomly chosen from a list</li>
+<li><a href="patterns/list#pxrand-18">pxrand</a> - embed values randomly chosen from a list</li>
+</ul>
+<h2 id="random-patterns-3">Random Patterns</h2>
+<ul>
+<li><a href="patterns/random#pbeta-2">pbeta</a> - random values that follow a Eulerian Beta Distribution</li>
+<li><a href="patterns/random#pbrown-3">pbrown</a> - brownian motion pattern</li>
+<li><a href="patterns/random#pcauchy-4">pcauchy</a> - random values that follow a Cauchy Distribution</li>
+<li><a href="patterns/random#pexprand-5">pexprand</a> - random values that follow a Exponential Distribution</li>
+<li><a href="patterns/random#pgauss-6">pgauss</a> - random values that follow a Gaussian Distribution</li>
+<li><a href="patterns/random#pgbrown-7">pgbrown</a> - geometric brownian motion pattern</li>
+<li><a href="patterns/random#phprand-8">phprand</a> - random values that tend toward hi</li>
+<li><a href="patterns/random#plprand-9">plprand</a> - random values that tend toward lo</li>
+<li><a href="patterns/random#pmeanrand-10">pmeanrand</a> - random values that tend toward ((lo + hi) / 2)</li>
+<li><a href="patterns/random#ppoisson-11">ppoisson</a> - random values that follow a Poisson Distribution (positive integer
+values)</li>
+<li><a href="patterns/random#pwhite-12">pwhite</a> - random values with uniform distribution</li>
+</ul>
+<h2 id="repetition-patterns-4">Repetition Patterns</h2>
+<ul>
+<li><a href="patterns/repetiotion#pclutch-2">pclutch</a> - sample and hold a pattern</li>
+<li><a href="patterns/repetiotion#pconst-3">pconst</a> - constrain the sum of a value pattern</li>
+<li><a href="patterns/repetiotion#pdup-4">pdup</a> - repeat input stream values</li>
+<li><a href="patterns/repetiotion#pn-5">pn</a> - repeatedly embed a pattern</li>
+<li><a href="patterns/repetiotion#psubdivide-7">psubdivide</a> - partition a value into n
+equal subdivisions</li>
+</ul>
+
+            </div>
+            <div class='sidebar-right'>
+                <div class='page-nav' id='page-nav'>
+                    <p class='page-nav-header'>On this page</p>
+                    <ul>
+                        
+                            <li class='page-nav-level-1'>
+                                <a href='#patterns-library-1'>Patterns Library</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#list-patterns-2'>List Patterns</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#random-patterns-3'>Random Patterns</a>
+                            </li>
+                        
+                            <li class='page-nav-level-2'>
+                                <a href='#repetition-patterns-4'>Repetition Patterns</a>
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            <div class='wave-container'>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                    <path fill-opacity="0.35" d="M0,192L60,213.3C120,235,240,277,360,277.3C480,277,600,235,720,192C840,149,960,107,1080,122.7C1200,139,1320,213,1380,250.7L1440,288L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.5" d="M0,160L60,181.3C120,203,240,245,360,229.3C480,213,600,139,720,138.7C840,139,960,213,1080,229.3C1200,245,1320,203,1380,181.3L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                    <path fill-opacity="0.2" d="M0,224L60,197.3C120,171,240,117,360,117.3C480,117,600,171,720,186.7C840,203,960,181,1080,186.7C1200,192,1320,224,1380,240L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                </svg>
+                <p>Powered by <a href='https://cli.doctave.com' target='_blank'>Doctave</a></p>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="/assets/mermaid.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/elasticlunr.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/doctave-app.js?v=1634751359"></script>
+    <script type="text/javascript" src="/assets/prism.js?v=1634751359"></script>
+</body>
+
+</html>
