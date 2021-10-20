@@ -61,4 +61,4 @@ The **pattern** is a map with optional values:
 - `amp` - amplitude (from 0.0 to 1.0)
 
 You can apply any pattern or combination of them, or write your own patterns to
-any of these keys. The patterns are just **koto** iterators.
+any of these keys. The patterns are just **Koto** iterators.

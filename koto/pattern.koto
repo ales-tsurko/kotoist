@@ -1,8 +1,8 @@
 import koto
 from test import assert, assert_eq, assert_near
-inf = from number import infinity
+export inf = from number import infinity
 
-as_iter = |value|
+export as_iter = |value|
   if koto.type(value) == "Iterator"
     loop
       next = value.next()
@@ -12,7 +12,13 @@ as_iter = |value|
     loop
       yield value
 
-rrand = |min, max|
+export csv_pattern = |pattern, num, file_name|
+  f = io.create "$file_name.csv"
+  f.write_line "x,y"
+  for n in 0..num
+    f.write_line "$n,${pattern.next()}"
+
+export rrand = |min, max|
   return (random.number() * (max - min)) + min
 
 number.rand = |self|
@@ -21,7 +27,7 @@ number.rand = |self|
 number.rand2 = |self|
   return random.number() * self * 2 - self
 
-exprand = |lo, hi|
+export exprand = |lo, hi|
   return lo * ((hi / lo).ln() * random.number()).exp()
 
 number.fold = |self, lo, hi|
@@ -136,7 +142,7 @@ iterator.mod = |self, other|
   else
     return self
 
-pbeta = |lo, hi, prob1, prob2, length|
+export pbeta = |lo, hi, prob1, prob2, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if prob1 == () then prob1 = 1
@@ -178,7 +184,7 @@ pbeta = |lo, hi, prob1, prob2, length|
 
     length -= 1
 
-pbrown = |lo, hi, step, length|
+export pbrown = |lo, hi, step, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if step == () then step = 0.125
@@ -213,7 +219,7 @@ pbrown = |lo, hi, step, length|
 
     length -= 1
 
-pgbrown = |lo, hi, step, length|
+export pgbrown = |lo, hi, step, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if step == () then step = 0.125
@@ -248,7 +254,7 @@ pgbrown = |lo, hi, step, length|
 
     length -= 1
 
-pcauchy = |mean, spread, length|
+export pcauchy = |mean, spread, length|
   if mean == () then mean = 0
   if spread == () then spread = 1
   if length == () then length = inf
@@ -273,7 +279,7 @@ pcauchy = |mean, spread, length|
 
     length -= 1
 
-pclump = |n, pattern|
+export pclump = |n, pattern|
   li = []
 
   loop
@@ -289,7 +295,7 @@ pclump = |n, pattern|
       yield li
       li = []
 
-pclutch = |pattern, connected|
+export pclutch = |pattern, connected|
   if connected == () then connected = true
   val = ()
 
@@ -307,7 +313,7 @@ pclutch = |pattern, connected|
     else
       yield val
 
-pconst = |sum, pattern, tollerance|
+export pconst = |sum, pattern, tollerance|
   if tollerance == () then tollerance = 0.001
   iter = as_iter pattern
   delta = ()
@@ -330,7 +336,7 @@ pconst = |sum, pattern, tollerance|
       elapsed = next_elapsed
       yield delta
 
-pdup = |n, pattern|
+export pdup = |n, pattern|
   if koto.type(n) == "Iterator"
     loop
       times = n.next()
@@ -347,7 +353,7 @@ pdup = |n, pattern|
       yield val
       n -= 1
 
-pexprand = |lo, hi, length|
+export pexprand = |lo, hi, length|
   if lo == () then lo = 0.0001
   if hi == () then hi = 1
   if length == () then length = inf
@@ -364,7 +370,7 @@ pexprand = |lo, hi, length|
 
     length -= 1
 
-pgauss = |mean, dev, length|
+export pgauss = |mean, dev, length|
   if mean == () then mean = 0
   if dev == () then dev = 1
   if length == () then length = inf
@@ -383,7 +389,7 @@ pgauss = |mean, dev, length|
 
     length -= 1
 
-pgeom = |start, grow, length|
+export pgeom = |start, grow, length|
   if start == () then start = 0
   if grow == () then grow = 1
   if length == () then length = inf
@@ -401,7 +407,7 @@ pgeom = |start, grow, length|
     counter += 1
     yield outval
 
-pwhite = |lo, hi, length|
+export pwhite = |lo, hi, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if length == () then length = inf
@@ -418,7 +424,7 @@ pwhite = |lo, hi, length|
 
     yield rrand lo_val, hi_val
 
-plprand = |lo, hi, length|
+export plprand = |lo, hi, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if length == () then length = inf
@@ -429,7 +435,7 @@ plprand = |lo, hi, length|
 
     yield iter1.next().min iter2.next()
 
-phprand = |lo, hi, length|
+export phprand = |lo, hi, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if length == () then length = inf
@@ -440,7 +446,7 @@ phprand = |lo, hi, length|
 
     yield iter1.next().max iter2.next()
 
-pmeanrand = |lo, hi, length|
+export pmeanrand = |lo, hi, length|
   if lo == () then lo = 0
   if hi == () then hi = 1
   if length == () then length = inf
@@ -451,7 +457,7 @@ pmeanrand = |lo, hi, length|
 
     yield (iter1.next() + iter2.next()) * 0.5
 
-pindex = |list_pat, index_pat, repeats|
+export pindex = |list_pat, index_pat, repeats|
   if repeats == () then repeats = 1
   index_iter = ()
   index = ()
@@ -478,7 +484,7 @@ pindex = |list_pat, index_pat, repeats|
     if item_count == 0 then break
     repeats -= 1
 
-pfsm = |list, repeats|
+export pfsm = |list, repeats|
   if list.is_empty() then return
   if repeats == () then repeats = 1
   item = ()
@@ -499,7 +505,7 @@ pfsm = |list, repeats|
         yield item
     repeats -= 1
 
-place = |list, repeats, offset|
+export place = |list, repeats, offset|
   if repeats == () then repeats = 1
   if offset == () then offset = 0
   offset_iter = as_iter offset
@@ -518,7 +524,7 @@ place = |list, repeats, offset|
     repeat_num += 1
     repeats -= 1
 
-ppoisson = |mean, length|
+export ppoisson = |mean, length|
   if mean == () then mean = 1
   if length == () then length = inf
   mean_iter = as_iter mean
@@ -534,7 +540,7 @@ ppoisson = |mean, length|
     yield inc
     length -= 1
 
-prand = |list, repeats|
+export prand = |list, repeats|
   if repeats == () then repeats = 1
   while repeats > 0
     item = random.pick list
@@ -548,7 +554,7 @@ prand = |list, repeats|
       yield item
     repeats -= 1
 
-prorate = |proportion, pattern|
+export prorate = |proportion, pattern|
   if pattern == () then pattern = 1
   iter = as_iter pattern
   prop = as_iter proportion
@@ -562,7 +568,7 @@ prorate = |proportion, pattern|
     yield c * val
     yield (1 - c) * val
 
-pseq = |list, repeats, offset|
+export pseq = |list, repeats, offset|
   if repeats == () then repeats = 1
   if offset == () then offset = 0
   offset = as_iter offset
@@ -581,7 +587,7 @@ pseq = |list, repeats, offset|
         yield event
     repeats -= 1
 
-pser = |list, repeats, offset|
+export pser = |list, repeats, offset|
   if repeats == () then repeats = 1
   if offset == () then offset = 0
   offset = as_iter offset
@@ -601,7 +607,7 @@ pser = |list, repeats, offset|
 
     repeats -= 1
 
-pseries = |start, step, length|
+export pseries = |start, step, length|
   if start == () then start = 0
   if step == () then step = 1
   if length == () then length = inf
@@ -618,7 +624,7 @@ pseries = |start, step, length|
     len -= 1
     yield outval
 
-pshuf = |list, repeats|
+export pshuf = |list, repeats|
   if repeats == () then repeats = 1
   list = list.scramble()
   while repeats > 0
@@ -632,7 +638,7 @@ pshuf = |list, repeats|
         yield item
     repeats -= 1
 
-pslide = |list, repeats, len, step, start, wrap_at_end|
+export pslide = |list, repeats, len, step, start, wrap_at_end|
   if repeats == () then repeats = 1
   if len == () then len = 3
   if step == () then step = 1
@@ -668,7 +674,7 @@ pslide = |list, repeats, len, step, start, wrap_at_end|
     pos += step_val
     repeats -= 1
 
-psubdivide = |n, pattern|
+export psubdivide = |n, pattern|
   durs = as_iter pattern
   subdivisions = as_iter n
   dur = durs.next()
@@ -684,7 +690,7 @@ psubdivide = |n, pattern|
     dur = durs.next()
     subdivision = subdivisions.next()
 
-pswitch = |list, which|
+export pswitch = |list, which|
   if which == () then which = 0
   index_iter = as_iter which
   index = index_iter.next()
@@ -699,7 +705,7 @@ pswitch = |list, which|
       yield item
     index = index_iter.next()
 
-ptuple = |list, repeats|
+export ptuple = |list, repeats|
   if repeats == () then repeats = 1
   while repeats > 0
     saw_nil = false
@@ -715,7 +721,7 @@ ptuple = |list, repeats|
       yield tuple
     repeats -= 1
 
-pwalk = |list, step_pattern, direction_pattern, start_pos|
+export pwalk = |list, step_pattern, direction_pattern, start_pos|
   if direction_pattern == () then direction_pattern = 1
   if start_pos == () then start_pos = 0
   index = as_iter(start_pos).next()
@@ -742,7 +748,7 @@ pwalk = |list, step_pattern, direction_pattern, start_pos|
     index = (index + step) % list.size()
     step = step_iter.next()
 
-pwrand = |list, weights, repeats|
+export pwrand = |list, weights, repeats|
   if repeats == () then repeats = 1
   w_iter = as_iter weights
   while repeats > 0
@@ -758,7 +764,7 @@ pwrand = |list, weights, repeats|
       yield item
     repeats -= 1
 
-pxrand = |list, repeats|
+export pxrand = |list, repeats|
   if repeats == () then repeats = 1
   index = list.size().rand().floor()
   while repeats > 0

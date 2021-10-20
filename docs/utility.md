@@ -10,10 +10,15 @@ Utility API
 
 ## midi_out
 
-### Args
+Plays the pattern.
 
-- the pattern to play
-- the quantization in beats.
+```coffee
+midi_out {}, 4
+```
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| pattern      | The pattern to play.       |         |
+| quantization | The quantization in beats. |         |
 
 The **pattern** is a map with optional values:
 
@@ -30,13 +35,6 @@ The **pattern** is a map with optional values:
 - `amp` - amplitude (from 0.0 to 1.0)
 
 
-### Example
-
-```coffee
-midi_out {}, 4
-```
-
-
 
 
 ## print_scales
@@ -45,14 +43,15 @@ Prints all available scales to the console.
 
 
 
+
 ## as_iter
 
 Converts any value into an iterator.
 
 
-### Args
-
-- any value
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Any value.                 |         |
 
 
 
@@ -62,10 +61,10 @@ Converts any value into an iterator.
 Returns a random number between two values.
 
 
-### Args
-
-- low value (a number)
-- high value (a number)
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| low          | Low value (a number).      |         |
+| high         | High value (a number).     |         |
 
 
 
@@ -75,10 +74,10 @@ Returns a random number between two values.
 Returns a random number between two values exponentially.
 
 
-### Args
-
-- low value (a number)
-- high value (a number)
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| low          | Low value (a number).      |         |
+| high         | High value (a number).     |         |
 
 
 
@@ -101,11 +100,10 @@ Returns a random number between the negative number and the number.
 
 Folds the number between two values.
 
-
-### Args
-
-- low value (a number)
-- high value (a number)
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| low          | Low value (a number).      |         |
+| high         | High value (a number).     |         |
 
 
 
@@ -114,10 +112,9 @@ Folds the number between two values.
 
 Round the number regarding to given quantization.
 
-
-### Args
-
-- quantization
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| quantization | A number.                  |         |
 
 
 
@@ -133,11 +130,10 @@ Returns the sign of the number.
 
 Wraps the number between two values.
 
-
-### Args
-
-- low value (a number)
-- high value (a number)
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| low          | Low value (a number).      |         |
+| high         | High value (a number).     |         |
 
 
 
@@ -169,10 +165,9 @@ equal to 1.0.
 
 Perform addition between the iterator and another iterator or a number.
 
-
-### Args
-
-- iterator or number
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Iterator or number.        |         |
 
 
 
@@ -181,10 +176,9 @@ Perform addition between the iterator and another iterator or a number.
 
 Perform subtraction between the iterator and another iterator or a number.
 
-
-### Args
-
-- iterator or number
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Iterator or number.        |         |
 
 
 
@@ -193,10 +187,9 @@ Perform subtraction between the iterator and another iterator or a number.
 
 Perform multiplication between the iterator and another iterator or a number.
 
-
-### Args
-
-- iterator or number
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Iterator or number.        |         |
 
 
 
@@ -205,10 +198,9 @@ Perform multiplication between the iterator and another iterator or a number.
 
 Perform division between the iterator and another iterator or a number.
 
-
-### Args
-
-- iterator or number
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Iterator or number.        |         |
 
 
 
@@ -218,7 +210,6 @@ Perform division between the iterator and another iterator or a number.
 Perform the modulo operation between the iterator and another iterator or a
 number.
 
-
-### Args
-
-- iterator or number
+| Argument     | Description                | Default |
+| --------     | -----------                | ------- |
+| value        | Iterator or number.        |         |
