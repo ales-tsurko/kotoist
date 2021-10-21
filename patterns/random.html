@@ -11,24 +11,24 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" type="text/css" href="/assets/normalize.css?v=1634830271" media="screen" />
-    <link rel="stylesheet" type="text/css" href="/assets/doctave-style.css?v=1634830271" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kotoist/assets/normalize.css?v=1634831043" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kotoist/assets/doctave-style.css?v=1634831043" media="screen" />
 
-    <link rel="stylesheet" type="text/css" href="/assets/prism-ghcolors.css?v=1634830271" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/kotoist/assets/prism-ghcolors.css?v=1634831043" media="screen" />
 
     
 
     <script>
-    var DOCTAVE_TIMESTAMP = "1634830271";
-    var color = localStorage.getItem('doctave-color')
+        var DOCTAVE_TIMESTAMP = "1634831043";
+        var color = localStorage.getItem('doctave-color')
 
-    if (color === 'dark') {
-        document.getElementsByTagName('html')[0].classList.remove('light');
-        document.getElementsByTagName('html')[0].classList.add('dark');
-    } else {
-        document.getElementsByTagName('html')[0].classList.remove('dark');
-        document.getElementsByTagName('html')[0].classList.add('light');
-    }
+        if (color === 'dark') {
+            document.getElementsByTagName('html')[0].classList.remove('light');
+            document.getElementsByTagName('html')[0].classList.add('dark');
+        } else {
+            document.getElementsByTagName('html')[0].classList.remove('dark');
+            document.getElementsByTagName('html')[0].classList.add('light');
+        }
     </script>
 
     
@@ -44,7 +44,7 @@
             <div class='logo'>
                 
                 <h2 class='project-name'>
-                    <a href='/'>
+                    <a href="/kotoist/">
                         Kotoist
                     </a>
                 </h2>
@@ -65,24 +65,24 @@
                 <nav class='site-nav'>
     <ul>
         
-            <li><a href="/patterns">Patterns Library</a></li>
+            <li><a href="/kotoist/patterns">Patterns Library</a></li>
             
                 <ul>
     
-        <li><a href="/patterns/list">List Patterns</a></li>
+        <li><a href="/kotoist/patterns/list">List Patterns</a></li>
         
     
-        <li><a class="active" href="/patterns/random">Random Patterns</a></li>
+        <li><a class="active" href="/kotoist/patterns/random">Random Patterns</a></li>
         
     
-        <li><a href="/patterns/repetition">Repetition Patterns</a></li>
+        <li><a href="/kotoist/patterns/repetition">Repetition Patterns</a></li>
         
     
 </ul>
 
             
         
-            <li><a href="/utility">Utility API</a></li>
+            <li><a href="/kotoist/utility">Utility API</a></li>
             
         
     </ul>
@@ -102,7 +102,7 @@
                 <h1 id="random-patterns-1">Random Patterns</h1>
 <h2 id="pbeta-2">pbeta</h2>
 <p>Random values that follow a Eulerian Beta Distribution.</p>
-<p><img src="/graphs/pbeta.png" alt="pbeta" title="pbeta plot"></p>
+<p><img src="/kotoist/graphs/pbeta.png" alt="pbeta" title="pbeta plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -112,7 +112,7 @@
 </tbody></table>
 <h2 id="pbrown-3">pbrown</h2>
 <p>Returns a stream that behaves like a brownian motion.</p>
-<p><img src="/graphs/pbrown.png" alt="pbrown" title="pbrown plot"></p>
+<p><img src="/kotoist/graphs/pbrown.png" alt="pbrown" title="pbrown plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -121,7 +121,7 @@
 </tbody></table>
 <h2 id="pcauchy-4">pcauchy</h2>
 <p>Random values that follow a Cauchy Distribution.</p>
-<p><img src="/graphs/pcauchy.png" alt="pcauchy" title="pcauchy plot"></p>
+<p><img src="/kotoist/graphs/pcauchy.png" alt="pcauchy" title="pcauchy plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>mean</td><td>The mean of the distribution.</td><td>0</td></tr>
 <tr><td>spread</td><td>The horizontal dispersion of the random values. The distribution is unbounded.</td><td>1</td></tr>
@@ -132,7 +132,7 @@
 <blockquote>
 <p>NOTE: lo and hi should both be positive or negative (their range should not cross 0).</p>
 </blockquote>
-<p><img src="/graphs/pexprand.png" alt="pexprand" title="pexprand plot"></p>
+<p><img src="/kotoist/graphs/pexprand.png" alt="pexprand" title="pexprand plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0.0001</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -141,7 +141,7 @@
 <h2 id="pgauss-6">pgauss</h2>
 <p>This pattern uses the Box-Muller transform to generate a gaussian distribution
 from uniformly distributed values.</p>
-<p><img src="/graphs/pgauss.png" alt="pgauss" title="pgauss plot"></p>
+<p><img src="/kotoist/graphs/pgauss.png" alt="pgauss" title="pgauss plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>mean</td><td>The mean of the distribution.</td><td>0</td></tr>
 <tr><td>dev</td><td>The spread of values around the mean (standard deviation).</td><td>1</td></tr>
@@ -149,7 +149,7 @@ from uniformly distributed values.</p>
 </tbody></table>
 <h2 id="pgbrown-7">pgbrown</h2>
 <p>Returns an iterator that behaves like a geometric brownian motion.</p>
-<p><img src="/graphs/pgbrown.png" alt="pgbrown" title="pgbrown plot"></p>
+<p><img src="/kotoist/graphs/pgbrown.png" alt="pgbrown" title="pgbrown plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -158,7 +158,7 @@ from uniformly distributed values.</p>
 </tbody></table>
 <h2 id="phprand-8">phprand</h2>
 <p>Random values that tend toward hi.</p>
-<p><img src="/graphs/phprand.png" alt="phprand" title="phprand plot"></p>
+<p><img src="/kotoist/graphs/phprand.png" alt="phprand" title="phprand plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -166,7 +166,7 @@ from uniformly distributed values.</p>
 </tbody></table>
 <h2 id="plprand-9">plprand</h2>
 <p>Random values that tend toward lo.</p>
-<p><img src="/graphs/plprand.png" alt="plprand" title="plprand plot"></p>
+<p><img src="/kotoist/graphs/plprand.png" alt="plprand" title="plprand plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -174,7 +174,7 @@ from uniformly distributed values.</p>
 </tbody></table>
 <h2 id="pmeanrand-10">pmeanrand</h2>
 <p>Random values that tend toward ((lo + hi) / 2).</p>
-<p><img src="/graphs/pmeanrand.png" alt="pmeanrand" title="pmeanrand plot"></p>
+<p><img src="/kotoist/graphs/pmeanrand.png" alt="pmeanrand" title="pmeanrand plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -182,14 +182,14 @@ from uniformly distributed values.</p>
 </tbody></table>
 <h2 id="ppoisson-11">ppoisson</h2>
 <p>Random values that follow a Poisson Distribution (positive integer values).</p>
-<p><img src="/graphs/ppoisson.png" alt="ppoisson" title="ppoisson plot"></p>
+<p><img src="/kotoist/graphs/ppoisson.png" alt="ppoisson" title="ppoisson plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>mean</td><td>The mean of the distribution.</td><td>1</td></tr>
 <tr><td>length</td><td>Number of values produced.</td><td>infinity</td></tr>
 </tbody></table>
 <h2 id="pwhite-12">pwhite</h2>
 <p>Random values with uniform distribution.</p>
-<p><img src="/graphs/pwhite.png" alt="pwhite" title="pwhite plot"></p>
+<p><img src="/kotoist/graphs/pwhite.png" alt="pwhite" title="pwhite plot"></p>
 <table><thead><tr><th>Argument</th><th>Description</th><th>Default</th></tr></thead><tbody>
 <tr><td>lo</td><td>Lower boundary of values.</td><td>0</td></tr>
 <tr><td>hi</td><td>Upper boundary of values.</td><td>1</td></tr>
@@ -263,10 +263,10 @@ from uniformly distributed values.</p>
             </div>
         </div>
     </div>
-    <script type="text/javascript" src="/assets/mermaid.js?v=1634830271"></script>
-    <script type="text/javascript" src="/assets/elasticlunr.js?v=1634830271"></script>
-    <script type="text/javascript" src="/assets/doctave-app.js?v=1634830271"></script>
-    <script type="text/javascript" src="/assets/prism.js?v=1634830271"></script>
+    <script type="text/javascript" src="/kotoist/assets/mermaid.js?v=1634831043"></script>
+    <script type="text/javascript" src="/kotoist/assets/elasticlunr.js?v=1634831043"></script>
+    <script type="text/javascript" src="/kotoist/assets/doctave-app.js?v=1634831043"></script>
+    <script type="text/javascript" src="/kotoist/assets/prism.js?v=1634831043"></script>
 </body>
 
 </html>
