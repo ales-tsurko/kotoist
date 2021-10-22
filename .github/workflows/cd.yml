@@ -15,6 +15,7 @@ jobs:
       - name: Package
         run: |
           cd gui
+          yarn
           yarn build
           cd -
           cargo build --release
