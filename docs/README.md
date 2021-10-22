@@ -8,6 +8,10 @@ It allows you to compose music on-the-fly using
 [Koto](https://github.com/koto-lang/koto) programming language and the library
 of patterns.
 
+You can download it [here](https://github.com/ales-tsurko/kotoist/releases).
+There's a binaries for macOS. Windows is supported, but you need to build it
+from source at the moment.
+
 The source code is available at
 [GitHub](https://github.com/ales-tsurko/kotoist).
 
