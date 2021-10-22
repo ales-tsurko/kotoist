@@ -1,0 +1,62 @@
+name: CD
+
+on:
+  push:
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  package_macos:
+    name: Package macOS
+    runs-on: macos-latest
+        
+    steps:
+      - uses: actions/checkout@v2
+      - name: Package
+        run: |
+          yarn build
+          cargo build --release
+          rm -rf target/release/Kotoist.vst
+          ./osx_vst_bundler.sh Kotoist target/release/libkotoist.dylib
+          mv Kotoist.vst target/release/
+          cd target/release
+          zip -r kotoist.zip Kotoist.vst
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: macos-package
+          path: target/release/kotoist.zip
+
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [package_macos]
+
+    steps:
+      - name: Create Release
+        id: cr
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Download macOS package
+        uses: actions/download-artifact@v1
+        with:
+          name: macos-package
+
+      - name: Upload macOS Release Asset
+        id: upload-mac-release-asset 
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.cr.outputs.upload_url }}
+          asset_path: macos-package/kotoist.zip
+          asset_name: kotoist.zip
+          asset_content_type: application/zip
