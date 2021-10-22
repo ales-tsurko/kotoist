@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Create Release
         id: cr
-        uses: actions/create-release@v1.8.10
+      - uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
