@@ -39,14 +39,9 @@ jobs:
     steps:
       - name: Create Release
         id: cr
-        uses: actions/create-release@v1.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/create-release@v1.8.10
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download macOS package
         uses: actions/download-artifact@v1
