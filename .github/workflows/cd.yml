@@ -14,7 +14,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Package
         run: |
+          cd gui
           yarn build
+          cd -
           cargo build --release
           rm -rf target/release/Kotoist.vst
           ./osx_vst_bundler.sh Kotoist target/release/libkotoist.dylib
