@@ -791,11 +791,14 @@ export pxrand = |list, repeats|
 
 pn = |pattern, repeats|
   while repeats > 0
-    iter = pattern.copy()
-    loop
-      next = iter.next()
-      if next == () then break
-      yield next
+    if koto.type(pattern) == "Iterator"
+      iter = pattern.copy()
+      loop
+        next = iter.next()
+        if next == () then break
+        yield next
+    else
+      yield pattern
     repeats -= 1
 
 
@@ -1525,5 +1528,10 @@ export @tests =
   @test pn: ||
     iter = pn pseq([1,2,3]), 2
     expected = [1,2,3,1,2,3,()]
+    for item in expected
+      assert_eq iter.next(), item
+
+    iter = pn(1, 4)
+    expected = [1,1,1,1,()]
     for item in expected
       assert_eq iter.next(), item
