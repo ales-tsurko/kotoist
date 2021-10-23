@@ -90,7 +90,7 @@ impl Plugin for Kotoist {
             name: "Kotoist".to_string(),
             vendor: "Ales Tsurko".to_string(),
             unique_id: 27052021,
-            category: Category::Generator,
+            category: Category::Synth,
             preset_chunks: true,
             ..Default::default()
         }

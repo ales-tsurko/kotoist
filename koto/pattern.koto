@@ -1386,7 +1386,7 @@ export @tests =
     for item in expected
       assert_eq foo.next(), item
 
-    foo = pseq [pseq([0,2], 2), pseq([1,3], 2)], 2
+    foo = pseq [pseq([0,2], 2), pseq([1,3], 2)], inf
     expected = [0,2,0,2,1,3,1,3]
     for _ in 0..2
       for item in expected

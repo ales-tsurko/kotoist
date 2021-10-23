@@ -59,7 +59,10 @@ pub(crate) fn make_module(orchestrator: Arc<Mutex<Orchestrator>>) -> ValueMap {
                     }
                 }
 
-                orchestrator_cl.lock().unwrap().schedule_patterns(patterns, quant);
+                orchestrator_cl
+                    .lock()
+                    .unwrap()
+                    .schedule_patterns(patterns, quant);
 
                 Ok(Empty)
             }
@@ -210,7 +213,10 @@ impl Player {
     }
 
     fn is_playing(&self) -> bool {
-        if let Some(time_info) = self.host.get_time_info(0) {
+        if let Some(time_info) = self
+            .host
+            .get_time_info((TimeInfoFlags::TRANSPORT_PLAYING).bits())
+        {
             return TimeInfoFlags::from_bits(time_info.flags)
                 .map(|val| val.contains(TimeInfoFlags::TRANSPORT_PLAYING))
                 .unwrap_or(false);
