@@ -73,8 +73,8 @@ impl Plugin for Kotoist {
     }
 
     fn init(&mut self) {
-        #[cfg(debug_assertions)]
-        init_log();
+        // #[cfg(debug_assertions)]
+        // init_log();
     }
 
     fn set_sample_rate(&mut self, rate: f32) {

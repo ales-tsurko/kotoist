@@ -140,8 +140,9 @@ struct Player {
     parameters: Arc<Parameters>,
     queued_stream: RwLock<Option<ScheduledEventPattern>>,
     stream: RwLock<Option<ScheduledEventPattern>>,
-    wait_until: f64,
+    next_note_on_pos: f64,
     last_position: f64,
+    note_offs: Vec<ScheduledEvent>,
 }
 
 impl Player {
@@ -176,40 +177,25 @@ impl Player {
 
     fn tick(&mut self) -> Option<Vec<MidiEvent>> {
         if !self.is_playing() {
-            self.wait_until = self.wait_until - self.last_position;
+            self.next_note_on_pos -= self.last_position;
+            self.note_offs.clear();
             return None;
         }
 
-        let position = self.position();
+        self.adjust_cursor_jump();
 
-        if position < self.last_position {
-            self.wait_until = self.wait_until - self.last_position;
-        }
-
-        self.last_position = self.position();
+        let mut note_offs = self.note_offs_at(self.last_position);
 
         self.check_queued(self.last_position);
 
-        let result = if let Some(stream) = self.stream.get_mut().unwrap() {
-            if position < self.wait_until {
-                return None;
-            }
-            match stream.pattern.try_next() {
-                Ok(event) => event.map(|e| self.process_events(position, e)),
-                Err(e) => {
-                    self.parameters.post_stderr(&format!("{}\n", e));
-                    None
-                }
-            }
-        } else {
-            None
-        };
-
-        result.map(|event| {
+        if let Some(event) = self.process_events() {
             let beat_length = self.beat_length();
             let length = event.event.length * beat_length * event.event.dur - 1.0;
-            event.into_vst_midi(self.host.get_block_size() as f64, length)
-        })
+            let mut result = event.into_vst_midi(self.host.get_block_size() as f64, length);
+            note_offs.append(&mut result);
+        };
+
+        Some(note_offs)
     }
 
     fn is_playing(&self) -> bool {
@@ -225,6 +211,36 @@ impl Player {
         false
     }
 
+    fn adjust_cursor_jump(&mut self) {
+        let position = self.position();
+
+        if position < self.last_position {
+            let last_position = self.last_position;
+            self.next_note_on_pos -= last_position;
+            self.note_offs
+                .iter_mut()
+                .for_each(|v| v.position -= last_position);
+        }
+
+        self.last_position = position;
+    }
+
+    fn note_offs_at(&mut self, position: f64) -> Vec<MidiEvent> {
+        let (current_offs, scheduled_offs) = self
+            .note_offs
+            .iter()
+            .cloned()
+            .partition(|v| position >= v.position);
+
+        self.note_offs = scheduled_offs;
+
+        current_offs
+            .into_iter()
+            .map(|e| e.into_vst_midi(self.host.get_block_size() as f64, 100.0))
+            .flatten()
+            .collect()
+    }
+
     /// check if the queued pattern should play
     fn check_queued(&mut self, position: f64) {
         let queued = self.queued_stream.get_mut().unwrap();
@@ -237,12 +253,49 @@ impl Player {
         }
     }
 
-    fn process_events(&mut self, position: f64, event: Event) -> ScheduledEvent {
+    fn process_events(&mut self) -> Option<ScheduledEvent> {
+        let position = self.position();
+
+        if let Some(stream) = self.stream.get_mut().unwrap() {
+            if position < self.next_note_on_pos {
+                return None;
+            }
+
+            match stream.pattern.try_next() {
+                Ok(event) => return event.map(|e| self.schedule_events(position, e)),
+                Err(e) => {
+                    self.parameters.post_stderr(&format!("{}\n", e));
+                    return None;
+                }
+            }
+
+        }
+
+        None
+    }
+
+    fn schedule_events(&mut self, position: f64, event: Event) -> ScheduledEvent {
         let end = event.dur * self.beat_length();
         let offset = position % end;
-        self.wait_until = position + end - offset;
+        self.next_note_on_pos = position + end - offset;
+        self.schedule_note_offs(position, event.clone());
 
         ScheduledEvent { position, event }
+    }
+
+    fn schedule_note_offs(&mut self, note_on_position: f64, event: Event) {
+        let end = event.length * event.dur * self.beat_length();
+        let offset = note_on_position % end;
+        let note_off_pos = note_on_position + end - offset;
+        let mut note_off = event;
+        note_off.value.iter_mut().for_each(|e| match e {
+            EventValue::Note(_, v, _) => *v = 0,
+            _ => (),
+        });
+        self.note_offs.push(ScheduledEvent {
+            position: note_off_pos,
+            event: note_off,
+        });
     }
 }
 
@@ -643,7 +696,10 @@ impl ScheduledEvent {
             .value
             .iter()
             .filter_map(|value| match value {
-                EventValue::Note(nn, vel, ch) => Some([0x90 + ch, *nn, *vel]),
+                EventValue::Note(nn, vel, ch) => {
+                    let status = if *vel > 0 { 0x90 } else { 0x80 };
+                    Some([status + ch, *nn, *vel])
+                }
                 &EventValue::Rest => None,
             })
             .map(|midi_data| MidiEvent {
