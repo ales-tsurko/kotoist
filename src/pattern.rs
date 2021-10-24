@@ -188,7 +188,7 @@ impl Player {
 
         self.check_queued(self.last_position);
 
-        if let Some(event) = self.process_events() {
+        if let Some(event) = self.next_event() {
             let beat_length = self.beat_length();
             let length = event.event.length * beat_length * event.event.dur - 1.0;
             let mut result = event.into_vst_midi(self.host.get_block_size() as f64, length);
@@ -236,7 +236,7 @@ impl Player {
 
         current_offs
             .into_iter()
-            .map(|e| e.into_vst_midi(self.host.get_block_size() as f64, 100.0))
+            .map(|e| e.into_vst_midi(self.host.get_block_size() as f64, 1.0))
             .flatten()
             .collect()
     }
@@ -253,7 +253,7 @@ impl Player {
         }
     }
 
-    fn process_events(&mut self) -> Option<ScheduledEvent> {
+    fn next_event(&mut self) -> Option<ScheduledEvent> {
         let position = self.position();
 
         if let Some(stream) = self.stream.get_mut().unwrap() {
@@ -268,7 +268,6 @@ impl Player {
                     return None;
                 }
             }
-
         }
 
         None
@@ -283,19 +282,14 @@ impl Player {
         ScheduledEvent { position, event }
     }
 
-    fn schedule_note_offs(&mut self, note_on_position: f64, event: Event) {
+    fn schedule_note_offs(&mut self, note_on_position: f64, mut event: Event) {
         let end = event.length * event.dur * self.beat_length();
-        let offset = note_on_position % end;
-        let note_off_pos = note_on_position + end - offset;
-        let mut note_off = event;
-        note_off.value.iter_mut().for_each(|e| match e {
+        let position = note_on_position + end;
+        event.value.iter_mut().for_each(|e| match e {
             EventValue::Note(_, v, _) => *v = 0,
             _ => (),
         });
-        self.note_offs.push(ScheduledEvent {
-            position: note_off_pos,
-            event: note_off,
-        });
+        self.note_offs.push(ScheduledEvent { position, event });
     }
 }
 
