@@ -15,12 +15,14 @@ If you wish to build manually, you should build GUI first:
 
 ```
 cd gui
+yarn
 yarn build
 ```
 
 Then you can build the plugin:
 
 ```
+cd ..
 cargo build
 ```
 

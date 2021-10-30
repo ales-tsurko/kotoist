@@ -50,6 +50,9 @@ struct Kotoist {
 
 impl Plugin for Kotoist {
     fn new(host: HostCallback) -> Self {
+        #[cfg(debug_assertions)]
+        init_log();
+
         let mut parameters = Parameters::default();
         parameters.set_host(host.clone());
         let parameters = Arc::new(parameters);
@@ -70,11 +73,6 @@ impl Plugin for Kotoist {
             orchestrator,
             ..Default::default()
         }
-    }
-
-    fn init(&mut self) {
-        // #[cfg(debug_assertions)]
-        // init_log();
     }
 
     fn set_sample_rate(&mut self, rate: f32) {
@@ -159,22 +157,23 @@ impl Plugin for Kotoist {
 #[cfg(debug_assertions)]
 fn init_log() {
     ONCE.call_once(|| {
-        let path = format!("{}/Desktop/kotoist.log", std::env::var("HOME").unwrap());
-        _init_log(path, LevelFilter::Debug);
+        _init_log(LevelFilter::Debug);
         info!("init log");
     });
 }
 
 #[cfg(windows)]
-fn _init_log(path: String, level: LevelFilter) {
+fn _init_log(level: LevelFilter) {
     use simple_logging;
+    let path = format!("{}/Desktop/kotoist.log", std::env::var("HOMEPATH").unwrap());
     simple_logging::log_to_file(path, level).unwrap();
 }
 
 #[cfg(unix)]
-fn _init_log(path: String, level: LevelFilter) {
+fn _init_log(level: LevelFilter) {
     use simplelog::{ConfigBuilder, WriteLogger};
     use std::fs::OpenOptions;
+    let path = format!("{}/Desktop/kotoist.log", std::env::var("HOME").unwrap());
 
     let file = OpenOptions::new()
         .append(true)
