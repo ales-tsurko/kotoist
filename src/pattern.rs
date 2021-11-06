@@ -184,16 +184,19 @@ impl Player {
 
         self.adjust_cursor_jump();
 
-        let mut note_offs = self.note_offs_at(self.last_position);
-
         self.check_queued(self.last_position);
 
-        if let Some(event) = self.next_event() {
-            let beat_length = self.beat_length();
-            let length = event.event.length * beat_length * event.event.dur - 1.0;
-            let mut result = event.into_vst_midi(self.host.get_block_size() as f64, length);
-            note_offs.append(&mut result);
-        };
+        let mut note_offs = vec![];
+
+        for n in 0..self.host.get_block_size() {
+            note_offs.append(&mut self.note_offs_at(self.last_position + n as f64));
+            if let Some(event) = self.next_event(n as f64) {
+                let beat_length = self.beat_length();
+                let length = event.event.length * beat_length * event.event.dur - 1.0;
+                let mut result = event.into_vst_midi(length);
+                note_offs.append(&mut result);
+            };
+        }
 
         Some(note_offs)
     }
@@ -236,7 +239,7 @@ impl Player {
 
         current_offs
             .into_iter()
-            .map(|e| e.into_vst_midi(self.host.get_block_size() as f64, 1.0))
+            .map(|e| e.into_vst_midi(1.0))
             .flatten()
             .collect()
     }
@@ -253,8 +256,8 @@ impl Player {
         }
     }
 
-    fn next_event(&mut self) -> Option<ScheduledEvent> {
-        let position = self.position();
+    fn next_event(&mut self, frame_offset: f64) -> Option<ScheduledEvent> {
+        let position = self.position() + frame_offset;
 
         if let Some(stream) = self.stream.get_mut().unwrap() {
             if position < self.next_note_on_pos {
@@ -275,8 +278,7 @@ impl Player {
 
     fn schedule_events(&mut self, position: f64, event: Event) -> ScheduledEvent {
         let end = event.dur * self.beat_length();
-        let offset = position % end;
-        self.next_note_on_pos = position + end - offset;
+        self.next_note_on_pos = position + end;
         self.schedule_note_offs(position, event.clone());
 
         ScheduledEvent { position, event }
@@ -683,9 +685,7 @@ pub(crate) struct ScheduledEvent {
 }
 
 impl ScheduledEvent {
-    pub(crate) fn into_vst_midi(self, block_size: f64, length: f64) -> Vec<MidiEvent> {
-        let delta_frames = block_size - (self.position % block_size);
-
+    pub(crate) fn into_vst_midi(self, length: f64) -> Vec<MidiEvent> {
         self.event
             .value
             .iter()
@@ -699,7 +699,7 @@ impl ScheduledEvent {
             .map(|midi_data| MidiEvent {
                 event_type: EventType::Midi,
                 byte_size: 8,
-                delta_frames: delta_frames as i32,
+                delta_frames: 0,
                 flags: MidiEventFlags::REALTIME_EVENT.bits(),
                 note_length: length as i32,
                 note_offset: 0,
