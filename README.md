@@ -62,6 +62,11 @@ crashes FL Studio on start. To prevent it, comment out the log initialization.
 
 Just tag a new version and push it to remote.
 
+```
+git tag {version}
+git push origin {version}
+```
+
 
 ### Docs
 
