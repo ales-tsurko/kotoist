@@ -15,10 +15,10 @@ Plays the pattern.
 ```coffee
 midi_out {}, 4
 ```
-| Argument     | Description                | Default |
-| --------     | -----------                | ------- |
-| pattern      | The pattern to play.       |         |
-| quantization | The quantization in beats. |         |
+| Argument     | Description                                   | Default |
+| --------     | -----------                                   | ------- |
+| pattern      | A pattern or an array of patterns to play.    |         |
+| quantization | The quantization in beats.                    |         |
 
 The **pattern** is a map with optional values:
 

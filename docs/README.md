@@ -48,7 +48,7 @@ The latest ran snippet is indicated by green color.
 The main function, which connects your DAW with **koto** is `midi_out`. The
 arguments are:
 
-- the pattern to play
+- a pattern or an array of patterns to play
 - the quantization in beats.
 
 The **pattern** is a map with optional values:
