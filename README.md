@@ -46,3 +46,37 @@ Creates a Plugin.vst bundle
 
 To make the plugin work as expected, you should right-click on the plugin in the
 FX Rack and choose "Send all keyboard input to plugin".
+
+
+
+
+## FL Studio Specific
+
+The debug build initialize a log file on your desktop. At least on macOS this
+crashes FL Studio on start. To prevent it, comment out the log initialization.
+
+
+
+
+## Deployment
+
+Just tag a new version and push it to remote.
+
+
+### Docs
+
+You need [doctave](https://github.com/Doctave/doctave) and **gh-pages** node
+package.
+
+To install **gh-pages** (it's important to use 3.0.0 version):
+
+```
+npm install -g gh-pages@3.0.0
+```
+
+Building and deploying the docs:
+
+```
+doctave build --release
+gh-pages -d site
+```
