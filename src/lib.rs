@@ -90,6 +90,10 @@ impl Plugin for Kotoist {
             unique_id: 27052021,
             category: Category::Synth,
             preset_chunks: true,
+            inputs: 0,
+            outputs: 0,
+            midi_inputs: 1,
+            midi_outputs: 1,
             ..Default::default()
         }
     }
