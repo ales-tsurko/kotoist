@@ -12,38 +12,41 @@
     unreachable_pub
 )]
 
-
 use nih_plug::prelude::*;
 use std::sync::{Arc, Mutex, Once};
 
 use log::{info, LevelFilter};
 
-// use vst::api::{Event, Events, Supported};
-// use vst::event::{Event as EventEnum, MidiEvent};
-// use vst::plugin::{CanDo, Category, HostCallback, Info, Plugin, PluginParameters};
-// use vst::{buffer::AudioBuffer, editor::Editor, host::Host, plugin_main};
+use crate::parameters::Parameters;
 
 // use crate::editor::{command::Command, KotoistEditor};
 // use crate::parameters::{Event as ParametersEvent, Parameters};
 // use crate::orchestrator::{make_module, Orchestrator};
 
 // mod editor;
-mod parameters;
-mod orchestrator;
 mod interpreter;
+mod orchestrator;
+mod parameters;
 mod pipe;
-
 
 #[cfg(debug_assertions)]
 static ONCE: Once = Once::new();
 
-#[derive(Default)]
 pub struct Kotoist {
     // host: HostCallback,
-    sample_rate: f32,
-    block_size: i64,
-    // parameters: Arc<Parameters>,
+    // sample_rate: f32,
+    // block_size: i64,
+    parameters: Arc<Parameters>,
     // orchestrator: Arc<Mutex<Orchestrator>>,
+}
+
+impl Default for Kotoist {
+    fn default() -> Self {
+        let (pipe_in, pipe_out) = pipe::new_pipe();
+        let parameters = Arc::new(Parameters::new(pipe_in));
+
+        Self { parameters }
+    }
 }
 
 impl Plugin for Kotoist {
@@ -60,7 +63,7 @@ impl Plugin for Kotoist {
     type SysExMessage = ();
 
     fn params(&self) -> Arc<dyn Params> {
-        todo!()
+        self.parameters.clone()
     }
 
     // fn new(host: HostCallback) -> Self {
@@ -139,7 +142,7 @@ impl Plugin for Kotoist {
         aux: &mut AuxiliaryBuffers<'_>,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        todo!()
+        ProcessStatus::KeepAlive
     }
 
     // fn process(
@@ -204,5 +207,23 @@ impl Plugin for Kotoist {
 //     let _ = WriteLogger::init(level, config, file).unwrap();
 // }
 
-// #[allow(missing_docs)]
-// plugin_main!(Kotoist);
+impl ClapPlugin for Kotoist {
+    const CLAP_ID: &'static str = "by.alestsurko.kotoist";
+    const CLAP_DESCRIPTION: Option<&'static str> =
+        Some("Live coding using Koto programming language");
+    const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
+    const CLAP_SUPPORT_URL: Option<&'static str> = None;
+    const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::NoteEffect];
+}
+
+impl Vst3Plugin for Kotoist {
+    const VST3_CLASS_ID: [u8; 16] = *b"KotoistAlesCurko";
+    const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[
+        Vst3SubCategory::Instrument,
+        Vst3SubCategory::Fx,
+        Vst3SubCategory::Tools,
+    ];
+}
+
+nih_export_clap!(Kotoist);
+nih_export_vst3!(Kotoist);

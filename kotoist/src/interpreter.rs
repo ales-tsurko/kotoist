@@ -30,9 +30,10 @@ pub(crate) fn init_koto(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn)
     result
         .compile(KOTO_LIB_CODE)
         .expect("core pattern lib should compile");
-    result
-        .run()
-        .expect("evaluating the koto pattern library should not fail");
+    if let Err(e) = result.run() {
+        eprintln!("{}", e);
+        panic!("evaluating the koto pattern library should not fail");
+    }
 
     result
 }
