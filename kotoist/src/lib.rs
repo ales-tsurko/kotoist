@@ -14,7 +14,6 @@
 use std::sync::{Arc, Mutex, Once};
 
 use nih_plug::prelude::*;
-use nih_plug_egui::{create_egui_editor, egui, widgets, EguiState};
 
 use crate::editor::create_editor;
 use crate::parameters::Parameters;

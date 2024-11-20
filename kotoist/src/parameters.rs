@@ -88,16 +88,13 @@ impl Parameters {
 
     pub(crate) fn eval_code(&self, code: &str) {
         let mut koto = self.koto.write().unwrap();
-        match koto.compile(code) {
-            Ok(_) => {
-                if let Err(err) = koto.run() {
-                    self.pipe_in
-                        .send(PipeMessage::Error(format!("Runtime error: {}\n", err)));
-                }
-            }
+        match koto.compile_and_run(code) {
+            Ok(v) => self.pipe_in.send(PipeMessage::Normal(
+                koto.value_to_string(v).unwrap_or_default(),
+            )),
             Err(err) => self
                 .pipe_in
-                .send(PipeMessage::Error(format!("Compiler error: {}\n", err))),
+                .send(PipeMessage::Error(format!("Error\n\n{}", err))),
         }
     }
 }
