@@ -3,7 +3,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 pub(crate) use self::pattern::{Event, EventValue, Pattern, ScheduledEvent};
 pub(crate) use self::scale::Scale;
 
-use crate::pipe::PipeIn;
+use crate::pipe::{Message as PipeMessage, PipeIn};
 
 mod pattern;
 mod scale;
@@ -169,7 +169,7 @@ impl Player {
             match stream.pattern.try_next() {
                 Ok(event) => return event.map(|e| self.schedule_events(position, beat_length, e)),
                 Err(e) => {
-                    self.pipe_in.send_err(&format!("{}\n", e));
+                    self.pipe_in.send(PipeMessage::Error(format!("{}\n", e)));
                     return None;
                 }
             }

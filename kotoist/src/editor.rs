@@ -1,76 +1,118 @@
-pub(crate) mod command;
+use std::sync::{atomic::Ordering, Arc, Mutex};
 
-use std::sync::{Arc, RwLock};
+use nih_plug::editor::Editor;
+use nih_plug_egui::{
+    create_egui_editor,
+    egui::{self, containers::ScrollArea},
+};
 
-use vst::editor::{Editor, KeyCode, KnobMode};
-use vst_gui::PluginGui;
-
-use self::command::make_dispatcher;
 use crate::parameters::Parameters;
+use crate::pipe::{Message as PipeMessage, PipeOut};
 
-const HTML: &'static str = include_str!("../gui/build/index.html");
-const EDITOR_SIZE: (i32, i32) = (650, 480);
+pub(crate) const WINDOW_SIZE: (u32, u32) = (800, 600);
 
-pub(crate) struct KotoistEditor {
-    gui: Arc<RwLock<PluginGui>>,
-    parameters: Arc<Parameters>,
+pub(crate) fn create_editor(
+    params: Arc<Parameters>,
+    pipe_out: Arc<Mutex<PipeOut>>,
+) -> Option<Box<dyn Editor>> {
+    create_egui_editor(
+        params.editor_state.clone(),
+        GuiState::default(),
+        |_, _| {},
+        move |egui_ctx, _setter, state| {
+            egui::SidePanel::left("pad-selector")
+                .min_width(150.0)
+                .show(egui_ctx, |ui| {
+                    side_panel(ui, params.clone());
+                });
+
+            egui::TopBottomPanel::bottom("console")
+                .exact_height(150.0)
+                .show(egui_ctx, |ui| bottom_panel(ui, state, &pipe_out));
+
+            // per egui docs the CentralPanel should always go last
+            let bg = egui::Visuals::default().faint_bg_color;
+            egui::CentralPanel::default()
+                .frame(egui::Frame::default().fill(bg))
+                .show(egui_ctx, |ui| {
+                    text_editor(egui_ctx, ui, &params);
+                });
+        },
+    )
 }
 
-impl KotoistEditor {
-    pub(crate) fn new(parameters: Arc<Parameters>) -> Self {
-        let gui = Arc::new(RwLock::new(vst_gui::new_plugin_gui(
-            String::from(HTML),
-            make_dispatcher(Arc::clone(&parameters)),
-            Some(EDITOR_SIZE),
-        )));
-
-        Self { gui, parameters }
-    }
+fn side_panel(ui: &mut egui::Ui, params: Arc<Parameters>) {
+    ui.add_space(6.0);
+    ui.label("Snippets");
+    ui.add_space(6.0);
 }
 
-impl Editor for KotoistEditor {
-    fn size(&self) -> (i32, i32) {
-        self.gui.read().unwrap().size()
-    }
+fn text_editor(ctx: &egui::Context, ui: &mut egui::Ui, params: &Arc<Parameters>) {
+    ScrollArea::both().show(ui, |ui| {
+        let index = params.selected_snippet_index();
+        let mut snippets = params.snippets.write().unwrap();
+        let output = egui::TextEdit::multiline(&mut snippets[index].code)
+            .code_editor()
+            .min_size(ui.available_size())
+            .frame(false)
+            .desired_width(f32::INFINITY)
+            .show(ui);
 
-    fn position(&self) -> (i32, i32) {
-        self.gui.read().unwrap().position()
-    }
+        let selected_text = output
+            .cursor_range
+            .map(|text_cursor_range| {
+                use egui::TextBuffer as _;
+                let selected_chars = text_cursor_range.as_sorted_char_range();
+                snippets[index].code.char_range(selected_chars)
+            })
+            .unwrap_or_default();
 
-    fn open(&mut self, parent: *mut std::ffi::c_void) -> bool {
-        self.gui.write().unwrap().open(parent)
-    }
+        ctx.input_mut(|i| {
+            if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND,
+                egui::Key::Enter,
+            )) {
+                let code = if selected_text.is_empty() {
+                    &snippets[index].code
+                } else {
+                    selected_text
+                };
 
-    fn is_open(&mut self) -> bool {
-        self.gui.write().unwrap().is_open()
-    }
+                params.eval_code(code);
+            }
+        });
+    });
+}
 
-    fn idle(&mut self) {
-        let mut gui = self.gui.write().unwrap();
-
-        gui.idle();
-
-        // process events
-        if let Some(event) = self.parameters.event_queue.write().unwrap().pop_front() {
-            let value = event.value;
-            let command = event.command;
-            gui.execute(&command.to_js_event(&value)).unwrap();
+fn bottom_panel(ui: &mut egui::Ui, state: &mut GuiState, pipe_out: &Arc<Mutex<PipeOut>>) {
+    ui.add_space(6.0);
+    ui.label("Console output");
+    ui.add_space(6.0);
+    ScrollArea::both().stick_to_bottom(true).show(ui, |ui| {
+        let pipe = pipe_out.lock().unwrap();
+        if let Ok(out) = pipe.receiver.try_recv() {
+            state.console.push(out);
         }
-    }
 
-    fn close(&mut self) {
-        self.gui.write().unwrap().close();
-    }
+        for out in &state.console {
+            match out {
+                PipeMessage::Normal(out) => {
+                    let out = egui::RichText::new(out).monospace();
+                    let _ = ui.label(out);
+                }
+                PipeMessage::Error(out) => {
+                    let color = ui.visuals().error_fg_color;
+                    let out = egui::RichText::new(out).monospace().color(color);
+                    let _ = ui.label(out);
+                }
+            }
+        }
 
-    fn set_knob_mode(&mut self, mode: KnobMode) -> bool {
-        self.gui.write().unwrap().set_knob_mode(mode)
-    }
+        ui.allocate_space(ui.available_size());
+    });
+}
 
-    fn key_up(&mut self, keycode: KeyCode) -> bool {
-        self.gui.write().unwrap().key_up(keycode)
-    }
-
-    fn key_down(&mut self, keycode: KeyCode) -> bool {
-        self.gui.write().unwrap().key_down(keycode)
-    }
+#[derive(Debug, Default)]
+struct GuiState {
+    console: Vec<PipeMessage>,
 }

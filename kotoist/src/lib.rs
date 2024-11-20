@@ -11,19 +11,15 @@
     unused_qualifications,
     unreachable_pub
 )]
-
-use nih_plug::prelude::*;
 use std::sync::{Arc, Mutex, Once};
 
-use log::{info, LevelFilter};
+use nih_plug::prelude::*;
+use nih_plug_egui::{create_egui_editor, egui, widgets, EguiState};
 
+use crate::editor::create_editor;
 use crate::parameters::Parameters;
 
-// use crate::editor::{command::Command, KotoistEditor};
-// use crate::parameters::{Event as ParametersEvent, Parameters};
-// use crate::orchestrator::{make_module, Orchestrator};
-
-// mod editor;
+mod editor;
 mod interpreter;
 mod orchestrator;
 mod parameters;
@@ -36,16 +32,17 @@ pub struct Kotoist {
     // host: HostCallback,
     // sample_rate: f32,
     // block_size: i64,
-    parameters: Arc<Parameters>,
-    // orchestrator: Arc<Mutex<Orchestrator>>,
+    params: Arc<Parameters>,
+    editor: Option<Box<dyn Editor>>,
 }
 
 impl Default for Kotoist {
     fn default() -> Self {
         let (pipe_in, pipe_out) = pipe::new_pipe();
-        let parameters = Arc::new(Parameters::new(pipe_in));
+        let params = Arc::new(Parameters::new(pipe_in));
+        let editor = create_editor(params.clone(), Arc::new(Mutex::new(pipe_out)));
 
-        Self { parameters }
+        Self { params, editor }
     }
 }
 
@@ -63,7 +60,14 @@ impl Plugin for Kotoist {
     type SysExMessage = ();
 
     fn params(&self) -> Arc<dyn Params> {
-        self.parameters.clone()
+        self.params.clone()
+    }
+
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        // as per docs it's:
+        // > Queried only once immediately after the plugin instance is created
+        // we can do it this way
+        self.editor.take()
     }
 
     // fn new(host: HostCallback) -> Self {
