@@ -13,6 +13,7 @@ pub(crate) fn init_koto(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn)
     let mut result = Koto::with_settings(
         KotoSettings {
             run_tests: cfg!(debug_assertions),
+            export_top_level_ids: true,
             ..Default::default()
         }
         .with_stdin(StdIn)
