@@ -11,11 +11,12 @@
     unused_qualifications,
     unreachable_pub
 )]
-use std::sync::{Arc, Mutex, Once};
+use std::sync::{Arc, Mutex};
 
 use nih_plug::prelude::*;
 
 use crate::editor::create_editor;
+use crate::orchestrator::{Event, EventValue};
 use crate::parameters::Parameters;
 
 mod editor;
@@ -24,13 +25,10 @@ mod orchestrator;
 mod parameters;
 mod pipe;
 
-#[cfg(debug_assertions)]
-static ONCE: Once = Once::new();
+const NUM_CHANNELS: u32 = 2;
 
+/// Plugin entry-point.
 pub struct Kotoist {
-    // host: HostCallback,
-    // sample_rate: f32,
-    // block_size: i64,
     params: Arc<Parameters>,
     editor: Option<Box<dyn Editor>>,
 }
@@ -51,7 +49,11 @@ impl Plugin for Kotoist {
     const URL: &'static str = "https://kotoist.alestsurko.by";
     const EMAIL: &'static str = "ales.tsurko@gmail.com";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
+        main_input_channels: NonZeroU32::new(NUM_CHANNELS),
+        main_output_channels: NonZeroU32::new(NUM_CHANNELS),
+        ..AudioIOLayout::const_default()
+    }];
     const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::MidiCCs;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -68,59 +70,6 @@ impl Plugin for Kotoist {
         // we can do it this way
         self.editor.take()
     }
-
-    // fn new(host: HostCallback) -> Self {
-    //     #[cfg(debug_assertions)]
-    //     init_log();
-
-    //     let mut parameters = Parameters::default();
-    //     parameters.set_host(host.clone());
-    //     let parameters = Arc::new(parameters);
-    //     let orchestrator = Arc::new(Mutex::new(Orchestrator::new(
-    //         host.clone(),
-    //         Arc::clone(&parameters),
-    //     )));
-    //     let mut prelude = parameters.koto.write().unwrap().prelude();
-    //     prelude.add_map("pattern", make_module(Arc::clone(&orchestrator)));
-    //     prelude.add_value("random", make_random_module());
-
-    //     parameters.eval_code("from pattern import midi_out, print_scales");
-    //     parameters.eval_code(KOTO_LIB_CODE);
-
-    //     Self {
-    //         host,
-    //         parameters,
-    //         orchestrator,
-    //         ..Default::default()
-    //     }
-    // }
-
-    // fn set_sample_rate(&mut self, rate: f32) {
-    //     self.sample_rate = rate;
-    // }
-
-    // fn set_block_size(&mut self, size: i64) {
-    //     self.block_size = size;
-    // }
-
-    // fn can_do(&self, can_do: CanDo) -> Supported {
-    //     use CanDo::*;
-    //     use Supported::*;
-
-    //     match can_do {
-    //         SendEvents
-    //         | SendMidiEvent
-    //         | ReceiveEvents
-    //         | ReceiveMidiEvent
-    //         | ReceiveTimeInfo
-    //         | MidiProgramNames
-    //         | Bypass
-    //         | ReceiveSysExEvent
-    //         | MidiSingleNoteTuningChange
-    //         | MidiKeyBasedInstrumentControl => Yes,
-    //         _ => Maybe,
-    //     }
-    // }
 
     // fn process_events(&mut self, events: &Events) {
     //     for e in events.events() {
@@ -142,73 +91,63 @@ impl Plugin for Kotoist {
     fn process(
         &mut self,
         buffer: &mut Buffer<'_>,
-        aux: &mut AuxiliaryBuffers<'_>,
+        _aux: &mut AuxiliaryBuffers<'_>,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        if let Ok(mut orch) = self.params.orchestrator.try_lock() {
+            let transport = context.transport();
+
+            orch.tick(transport.playing, &transport.into(), buffer.samples())
+                .into_iter()
+                .flat_map(|e| plugin_note_from_event(e, buffer.samples()))
+                .for_each(|e| context.send_event(e));
+        }
+
         ProcessStatus::KeepAlive
     }
-
-    // fn process(
-    //     &mut self,
-    //     _buffer: &mut AudioBuffer<'_, f32>,
-    //     _aux: &mut AuxiliaryBuffers<'_>,
-    //     _context: &mut impl ProcessContext<Self>,
-    // ) -> ProcessStatus {
-    //     // FIXME: oh no
-    //     let events = self.orchestrator.lock().unwrap().tick();
-    //     for mut event in events.into_iter() {
-    //         let conv: *mut Event = unsafe { std::mem::transmute(&mut event) };
-    //         let events = Events {
-    //             num_events: 1,
-    //             _reserved: 0,
-    //             events: [conv, conv],
-    //         };
-    //         self.host.process_events(&events);
-    //     }
-
-    //     ProcessStatus::KeepAlive
-    // }
-
-    // fn get_editor(&mut self) -> Option<Box<dyn Editor>> {
-    //     Some(Box::new(KotoistEditor::new(Arc::clone(&self.parameters))))
-    // }
-
-    // fn params(&mut self) -> Arc<dyn Params> {
-    //     let result = Arc::clone(&self.parameters);
-    //     let result: Arc<dyn Params> = result;
-    //     result
-    // }
 }
 
-// #[cfg(debug_assertions)]
-// fn init_log() {
-//     ONCE.call_once(|| {
-//         _init_log(LevelFilter::Debug);
-//         info!("init log");
-//     });
-// }
+impl From<&Transport> for orchestrator::Transport {
+    fn from(value: &Transport) -> Self {
+        // beats per second tempo
+        let tempo = value.tempo.unwrap_or(120.0) / 60.0;
+        let position = value.pos_samples().unwrap_or_default() as f64;
+        let sample_rate = value.sample_rate as f64;
+        let beat_length = sample_rate / tempo;
 
-// #[cfg(windows)]
-// fn _init_log(level: LevelFilter) {
-//     use simple_logging;
-//     let path = format!("{}/Desktop/kotoist.log", std::env::var("HOMEPATH").unwrap());
-//     simple_logging::log_to_file(path, level).unwrap();
-// }
+        orchestrator::Transport {
+            position,
+            beat_length,
+        }
+    }
+}
 
-// #[cfg(unix)]
-// fn _init_log(level: LevelFilter) {
-//     use simplelog::{ConfigBuilder, WriteLogger};
-//     use std::fs::OpenOptions;
-//     let path = format!("{}/Desktop/kotoist.log", std::env::var("HOME").unwrap());
-
-//     let file = OpenOptions::new()
-//         .append(true)
-//         .create(true)
-//         .open(path)
-//         .unwrap();
-//     let config = ConfigBuilder::new().set_time_to_local(true).build();
-//     let _ = WriteLogger::init(level, config, file).unwrap();
-// }
+fn plugin_note_from_event(event: Event, block_size: usize) -> Vec<PluginNoteEvent<Kotoist>> {
+    event
+        .value
+        .iter()
+        .filter_map(|v| match v {
+            EventValue::Note(nn, vel, ch) => Some(if *vel > 0 {
+                PluginNoteEvent::<Kotoist>::NoteOn {
+                    timing: (event.frame_offset % block_size) as u32,
+                    channel: *ch,
+                    note: *nn,
+                    velocity: *vel as f32 / 127.0,
+                    voice_id: Some(*nn as i32),
+                }
+            } else {
+                PluginNoteEvent::<Kotoist>::NoteOff {
+                    timing: (event.frame_offset % block_size) as u32,
+                    channel: *ch,
+                    note: *nn,
+                    velocity: 0.0,
+                    voice_id: Some(*nn as i32),
+                }
+            }),
+            EventValue::Rest => None,
+        })
+        .collect()
+}
 
 impl ClapPlugin for Kotoist {
     const CLAP_ID: &'static str = "by.alestsurko.kotoist";
@@ -216,11 +155,11 @@ impl ClapPlugin for Kotoist {
         Some("Live coding using Koto programming language");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::NoteEffect];
+    const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::NoteEffect, ClapFeature::Utility];
 }
 
 impl Vst3Plugin for Kotoist {
-    const VST3_CLASS_ID: [u8; 16] = *b"KotoistAlesCurko";
+    const VST3_CLASS_ID: [u8; 16] = *b"KotoistAles22222";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[
         Vst3SubCategory::Instrument,
         Vst3SubCategory::Fx,

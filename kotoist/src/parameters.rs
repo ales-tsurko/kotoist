@@ -16,8 +16,8 @@ use crate::pipe::{Message as PipeMessage, PipeIn};
 #[derive(Params)]
 pub(crate) struct Parameters {
     koto: RwLock<Koto>,
-    orchestrator: Arc<Mutex<Orchestrator>>,
     pipe_in: PipeIn,
+    pub(crate) orchestrator: Arc<Mutex<Orchestrator>>,
     #[persist = "editor-state"]
     pub(crate) editor_state: Arc<EguiState>,
     #[persist = "selected-snippet"]
@@ -41,7 +41,7 @@ impl Parameters {
             koto: RwLock::new(koto),
             pipe_in,
             orchestrator: orchestrator.clone(),
-            selected_snippet: 60.into(),
+            selected_snippet: Default::default(),
             snippets,
             editor_state: EguiState::from_size(WINDOW_SIZE.0, WINDOW_SIZE.1),
         }
@@ -53,22 +53,6 @@ impl Parameters {
 
     pub(crate) fn selected_snippet_index(&self) -> usize {
         self.selected_snippet.load(Ordering::SeqCst)
-    }
-
-    pub(crate) fn set_code(&self, index: usize, code: &str) {
-        if let Some(snippet) = self
-            .snippets
-            .write()
-            .ok()
-            .as_mut()
-            .and_then(|s| s.get_mut(index))
-        {
-            snippet.code = code.to_owned();
-        }
-    }
-
-    pub(crate) fn code(&self, index: usize) -> String {
-        self.snippets.read().unwrap()[index].code.clone()
     }
 
     pub(crate) fn eval_snippet_at(&self, index: usize) {

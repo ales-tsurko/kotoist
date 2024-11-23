@@ -1,4 +1,4 @@
-use koto::runtime::{runtime_error, KIterator, KIteratorOutput, KList, KMap, KValue, ValueMap};
+use koto::runtime::{KIterator, KIteratorOutput, KList, KMap, KValue};
 use thiserror::Error;
 
 use crate::orchestrator::Scale;
@@ -13,6 +13,7 @@ pub(super) trait Stream {
     fn try_next(&mut self) -> Result<Option<Self::Item>, Error>;
 }
 
+#[derive(Debug)]
 pub(super) struct StreamF64 {
     value: Option<f64>,
     iterator: Option<KIterator>,
@@ -78,6 +79,7 @@ impl Stream for StreamF64 {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct StreamVecDegree {
     value: Option<Vec<Degree>>,
     iterator: Option<KIterator>,
@@ -99,7 +101,7 @@ impl StreamVecDegree {
                 KValue::Str(value) => match value.as_str() {
                     "rest" => Ok(Degree::Rest),
                     other => Err(Error::ReturnType(
-                        format!("{}", other),
+                        other.to_string(),
                         "number or rest".to_string(),
                     )),
                 },
@@ -130,7 +132,7 @@ impl Stream for StreamVecDegree {
                     iterator: None,
                 }),
                 val => Err(Error::ValueType(
-                    format!("{}", val),
+                    val.to_string(),
                     "number, iterator or rest".to_string(),
                 )),
             },
@@ -160,7 +162,7 @@ impl Stream for StreamVecDegree {
                     KValue::Str(value) => match value.as_str() {
                         "rest" => Ok(vec![Degree::Rest]),
                         other => Err(Error::ReturnType(
-                            format!("{}", other),
+                            other.to_string(),
                             "number or rest".to_string(),
                         )),
                     },
@@ -195,6 +197,7 @@ impl StreamScale {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct StreamScale {
     value: Option<Scale>,
     iterator: Option<KIterator>,

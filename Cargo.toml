@@ -3,6 +3,5 @@ members = ["kotoist", "xtask"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
 authors = ["Ales Tsurko <ales.tsurko@gmail.com>"]
 edition = "2021"

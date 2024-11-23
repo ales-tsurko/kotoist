@@ -5,6 +5,7 @@ use koto::runtime::KMap;
 use super::stream::*;
 use crate::orchestrator::Scale;
 
+#[derive(Debug)]
 pub(crate) struct Pattern {
     dur: StreamF64,
     length: StreamF64,
@@ -19,7 +20,7 @@ pub(crate) struct Pattern {
 }
 
 impl Pattern {
-    pub(crate) fn try_next(&mut self) -> Result<Option<Event>, Error> {
+    pub(crate) fn try_next(&mut self, frame_offset: usize) -> Result<Option<Event>, Error> {
         macro_rules! extract_value {
             ($name:ident) => {
                 match self.$name.try_next()? {
@@ -52,7 +53,12 @@ impl Pattern {
             })
             .collect();
 
-        Ok(Some(Event { value, dur, length }))
+        Ok(Some(Event {
+            value,
+            dur,
+            length,
+            frame_offset,
+        }))
     }
 
     fn make_pitches(
@@ -156,6 +162,8 @@ pub(crate) struct ScheduledEvent {
 #[derive(Debug, Clone)]
 pub(crate) struct Event {
     pub(crate) value: Vec<EventValue>,
+    /// sample position within the block
+    pub(crate) frame_offset: usize,
     pub(crate) dur: f64,
     pub(crate) length: f64,
 }
@@ -164,7 +172,6 @@ pub(crate) struct Event {
 pub(crate) enum EventValue {
     // note number, velocity, channel number
     // velocity == 0 is note-off
-    Note(u8, u8, u8), 
+    Note(u8, u8, u8),
     Rest,
 }
-

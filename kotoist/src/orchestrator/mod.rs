@@ -1,5 +1,3 @@
-use std::sync::mpsc::{self, Receiver, Sender};
-
 pub(crate) use self::pattern::{Event, EventValue, Pattern, ScheduledEvent};
 pub(crate) use self::scale::Scale;
 
@@ -100,9 +98,7 @@ impl Player {
 
         for n in 0..block_size {
             result.append(&mut self.note_offs_at(self.last_position + n as f64));
-            if let Some(event) =
-                self.next_event(n as f64, transport.position, transport.beat_length)
-            {
+            if let Some(event) = self.next_event(n, transport.position, transport.beat_length) {
                 result.push(event.event);
             }
         }
@@ -155,18 +151,18 @@ impl Player {
 
     fn next_event(
         &mut self,
-        frame_offset: f64,
+        frame_offset: usize,
         position: f64,
         beat_length: f64,
     ) -> Option<ScheduledEvent> {
-        let position = position + frame_offset;
+        let position = position + frame_offset as f64;
 
         if let Some(stream) = &mut self.stream {
             if position < self.next_note_on_pos {
                 return None;
             }
 
-            match stream.pattern.try_next() {
+            match stream.pattern.try_next(frame_offset) {
                 Ok(event) => return event.map(|e| self.schedule_events(position, beat_length, e)),
                 Err(e) => {
                     self.pipe_in.send(PipeMessage::Error(format!("{}\n", e)));
@@ -189,6 +185,7 @@ impl Player {
     fn schedule_note_offs(&mut self, note_on_position: f64, beat_length: f64, mut event: Event) {
         let end = event.length * event.dur * beat_length;
         let position = note_on_position + end;
+        event.frame_offset += end as usize;
         event.value.iter_mut().for_each(|e| {
             if let EventValue::Note(_, v, _) = e {
                 *v = 0;
@@ -198,6 +195,7 @@ impl Player {
     }
 }
 
+#[derive(Debug)]
 struct ScheduledPattern {
     position: f64,
     pattern: Pattern,

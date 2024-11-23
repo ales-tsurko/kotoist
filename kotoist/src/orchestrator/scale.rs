@@ -54,7 +54,7 @@ pub(crate) enum Scale {
 impl Scale {
     /// Returns a String for printing all available scales.
     pub(crate) fn list() -> String {
-            "
+        "
             acoustic          => 0, 2, 4, 6, 7, 9, 10
             adonai-malakh     => 0, 2, 4, 5, 7, 9, 10
             aeolian           => 0, 2, 3, 5, 7, 8, 10
@@ -100,7 +100,8 @@ impl Scale {
             ukrainian-dorian  => 0, 2, 3, 6, 7, 9, 10
             whole-tone        => 0, 2, 4, 6, 8, 10
             yo                => 0, 3, 5, 7, 10
-            ".to_string()
+            "
+        .to_string()
     }
 }
 
