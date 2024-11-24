@@ -1,4 +1,6 @@
 .DS_Store
-/site
-/target
+.nvim
+site
+target
 Cargo.lock
+reinstall.sh

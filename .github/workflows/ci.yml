@@ -13,14 +13,14 @@ jobs:
   build:
     strategy:
       matrix: 
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Cache Cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -28,17 +28,17 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build GUI
+      - name: Install deps on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          cd gui
-          yarn
-          yarn build
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgl-dev libjack-dev libx11-xcb-dev  libxcb1-dev libxcb-dri2-0-dev libxcb-icccm4-dev libxcursor-dev libxkbcommon-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
       - name: Build 
-        run: cargo build
+        run: cargo build --workspace
 
       - name: Test
-        run: cargo test
+        run: cargo test --workspace
 
   test-lib:
     runs-on: ubuntu-latest
@@ -58,5 +58,5 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo install koto_cli --git https://github.com/koto-lang/koto.git
-          koto --tests koto/pattern.koto
+          cargo install koto_cli@0.14.1
+          koto --tests kotoist/koto/pattern.koto

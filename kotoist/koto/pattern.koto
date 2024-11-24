@@ -1,0 +1,1653 @@
+import koto
+from test import assert, assert_eq, assert_near
+export inf = from number import infinity
+
+export as_iter = |value|
+  if koto.type(value) == "Iterator"
+    loop
+      next = value.try_next()
+      if next == null then break
+      yield next
+  else
+    loop
+      yield value
+
+export csv_pattern = |pattern, num, file_name|
+  f = io.create "$file_name.csv"
+  f.write_line "x,y"
+  for n in 0..num
+    value = pattern.try_next()
+    f.write_line "$n,${value}"
+
+export rrand = |min, max|
+  return (random.number() * (max - min)) + min
+
+number.rand = ||
+  return self * random.number()
+
+number.rand2 = ||
+  return random.number() * self * 2 - self
+
+export exprand = |lo, hi|
+  return lo * ((hi / lo).ln() * random.number()).exp()
+
+number.fold = |lo, hi|
+  x = self - lo
+
+  # avoid the divide if possible
+  if self >= hi 
+    temp = hi + hi - self
+    if temp >= lo
+      return temp
+  else if self < lo
+    temp = lo + lo - self
+    if temp < hi
+      return temp
+
+  if hi == lo
+    return lo
+
+  # ok do the divide
+  range = hi - lo
+  range2 = range + range
+  c = x - range2 * (x / range2).floor()
+  if c >= range
+    c = range2 - c
+
+  return c + lo
+
+number.round = |quant|
+  if quant == 0.0 then self else (self / quant + 0.5).floor() * quant
+
+number.sign = ||
+  if self >= 0 then 1 else -1
+
+number.wrap = |lo, hi|
+    range = 0
+    if self >= hi
+      range = hi - lo
+      self -= range
+      if self < hi
+        return self
+    else if self < lo
+      range = hi - lo
+      self += range
+      if self >= lo
+        return self
+    else
+      return self
+
+    if hi == lo
+      return lo
+    return self - range * ((self - lo) / range).floor()
+
+list.size = ||
+  return koto.size(self)
+
+list.copy = || return koto.copy(self)
+
+list.scramble = ||
+  result = []
+  li_cp = koto.copy self
+  loop
+    if li_cp.is_empty() then return result
+    index = (li_cp.size() * random.number()).floor()
+    result.push(li_cp.remove(index))
+
+list.windex = ||
+  r = random.number()
+  sum = 0
+  for n, item in self.iter().enumerate()
+    sum += item
+    if sum >= r
+      return n
+
+list.normalize_sum = ||
+  divisor = self.iter().sum()
+  return self.iter().each(|x| x / divisor).to_list()
+
+list.add = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x + other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a + b).to_list()
+  else
+    throw "Unsupported type for `list.add`"
+
+list.sub = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x - other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a - b).to_list()
+  else
+    throw "Unsupported type for `list.sub`"
+
+list.mul = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x * other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a * b).to_list()
+  else
+    throw "Unsupported type for `list.mul`"
+
+list.div = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x / other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a / b).to_list()
+  else
+    throw "Unsupported type for `list.div`"
+
+list.mod = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x % other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a % b).to_list()
+  else
+    throw "Unsupported type for `list.mod`"
+
+iterator.copy = || return koto.copy(self)
+
+iterator.try_next = ||
+  value = self.next()
+  if value == null then value else value.get()
+
+iterator.add = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.add(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x + other
+      else
+        throw "Unsupported type for `iterator.add`"
+      )
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a + b)
+  else
+    throw "Unsupported type for `iterator.add`"
+
+iterator.sub = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.sub(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x - other
+      else
+        throw "Unsupported type for `iterator.sub`"
+      )
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a - b)
+  else
+    throw "Unsupported type for `iterator.sub`"
+
+iterator.mul = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.mul(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x * other
+      else
+        throw "Unsupported type for `iterator.mul`"
+      )
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a * b)
+  else
+    throw "Unsupported type for `iterator.mul`"
+
+iterator.div = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.div(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x / other
+      else
+        throw "Unsupported type for `iterator.div`"
+      )
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a / b)
+  else
+    throw "Unsupported type for `iterator.div`"
+
+iterator.mod = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.mod(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x % other
+      else
+        throw "Unsupported type for `iterator.mod`"
+      )
+  else if koto.type(other) == "Iterator"
+    return self.zip(other).each(|(a, b)| a % b)
+  else
+    throw "Unsupported type for `iterator.mod`"
+
+export pbeta = |lo, hi, prob1, prob2, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if prob1 == null then prob1 = 1
+  if prob2 == null then prob2 = 1
+  if length == null then length = inf
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  prob1_iter = as_iter prob1
+  prob2_iter = as_iter prob2
+  lo_val = null
+  hi_val = null
+
+  while length > 0
+    rprob1 = prob1_iter.try_next()
+    rprob2 = prob2_iter.try_next()
+
+    if rprob1 == null or rprob2 == null
+      yield null
+      break
+
+    rprob1 = rprob1.recip()
+    rprob2 = rprob2.recip()
+
+    lo_val = lo_iter.try_next()
+    hi_val = hi_iter.try_next()
+
+    if lo_val == null or hi_val == null
+      yield null
+      break
+
+    sum = 2
+    temp = 0
+
+    while sum > 1
+      temp = random.number().pow(rprob1)
+      sum = temp + random.number().pow(rprob2)
+
+    yield ((temp / sum) * (hi_val - lo_val)) + lo_val
+
+    length -= 1
+
+export pbrown = |lo, hi, step, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if step == null then step = 0.125
+  if length == null then length = inf
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  step_iter = as_iter step
+
+  lo_val = lo_iter.try_next()
+  hi_val = hi_iter.try_next()
+  step_val = step_iter.try_next()
+
+  if lo_val == null or hi_val == null or step_val == null
+    yield null
+    return
+
+  cur = rrand lo_val, hi_val
+
+  while length > 0
+    lo_val = lo_iter.try_next()
+    hi_val = hi_iter.try_next()
+    step_val = step_iter.try_next()
+
+    if lo_val == null or hi_val == null or step_val == null
+      yield null
+      break
+
+    next = cur + step_val.rand2()
+    cur = next.fold(lo_val, hi_val)
+
+    yield cur
+
+    length -= 1
+
+export pgbrown = |lo, hi, step, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if step == null then step = 0.125
+  if length == null then length = inf
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+  step_iter = as_iter step
+
+  lo_val = lo_iter.try_next()
+  hi_val = hi_iter.try_next()
+  step_val = step_iter.try_next()
+
+  if lo_val == null or hi_val == null or step_val == null
+    yield null
+    return
+
+  cur = rrand lo_val, hi_val
+
+  while length > 0
+    lo_val = lo_iter.try_next()
+    hi_val = hi_iter.try_next()
+    step_val = step_iter.try_next()
+
+    if lo_val == null or hi_val == null or step_val == null
+      yield null
+      break
+
+    next = cur * (1 + step_val.rand2())
+    cur = next.fold(lo_val, hi_val)
+
+    yield cur
+
+    length -= 1
+
+export pcauchy = |mean, spread, length|
+  if mean == null then mean = 0
+  if spread == null then spread = 1
+  if length == null then length = inf
+  mean_iter = as_iter mean
+  spread_iter = as_iter spread
+  mean_val = null
+  spread_val = null
+
+  while length > 0
+    ran = 0.5
+    mean_val = mean_iter.try_next()
+    spread_val = spread_iter.try_next()
+
+    if mean_val == null or spread_val == null
+      yield null
+      break
+
+    while ran == 0.5
+      ran = random.number()
+
+    yield ((ran * number.pi).tan() * spread_val) + mean_val
+
+    length -= 1
+
+export pclump = |n, pattern|
+  li = []
+
+  loop
+    next = pattern.try_next()
+
+    if next == null
+      yield li
+      break
+
+    li.push next
+
+    if li.size() == n
+      yield li
+      li = []
+
+export pclutch = |pattern, connected|
+  if connected == null then connected = true
+  val = null
+
+  loop
+    is_con = connected.try_next()
+
+    if is_con == null
+      yield null
+      break
+    else if is_con
+      val = pattern.try_next()
+      yield val
+      if val == null
+        break
+    else
+      yield val
+
+export pconst = |sum, pattern, tollerance|
+  if tollerance == null then tollerance = 0.001
+  iter = as_iter pattern
+  delta = null
+  elapsed = 0.0
+  next_elapsed = null
+
+  loop 
+    delta = iter.try_next()
+
+    if delta == null
+      yield sum - elapsed
+      break
+
+    next_elapsed = elapsed + delta
+
+    if next_elapsed.round(tollerance) >= sum
+      yield sum - elapsed
+      break
+    else
+      elapsed = next_elapsed
+      yield delta
+
+export pdup = |n, pattern|
+  if koto.type(n) == "Iterator"
+    loop
+      times = n.try_next()
+      if times == null then break
+      val = pattern.try_next()
+      if val == null then break
+      while times > 0
+        yield val
+        times -= 1
+  else 
+    val = pattern.try_next()
+    if val == null then return
+    while n > 0
+      yield val
+      n -= 1
+
+export pexprand = |lo, hi, length|
+  if lo == null then lo = 0.0001
+  if hi == null then hi = 1
+  if length == null then length = inf
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+
+  while length > 0
+    hi_val = hi_iter.try_next()
+    lo_val = lo_iter.try_next()
+
+    if hi_val == null or lo_val == null then break
+
+    yield exprand(lo_val, hi_val)
+
+    length -= 1
+
+export pgauss = |mean, dev, length|
+  if mean == null then mean = 0
+  if dev == null then dev = 1
+  if length == null then length = inf
+  mean_iter = as_iter mean
+  dev_iter = as_iter dev
+
+  while length > 0
+    dev_val = dev_iter.try_next()
+    mean_val = mean_iter.try_next()
+
+    if mean_val == null or dev_val == null then break
+
+    a = (-2 * random.number().ln()).sqrt()
+    b = (2 * number.pi * random.number()).sin()
+    yield a * b * dev_val + mean_val
+
+    length -= 1
+
+export pgeom = |start, grow, length|
+  if start == null then start = 0
+  if grow == null then grow = 1
+  if length == null then length = inf
+  grow_iter = as_iter grow
+  outval = null
+  counter = 0
+
+  while counter < length
+    grow_val = grow_iter.try_next()
+
+    if grow_val == null then break
+
+    outval = start
+    start = start * grow_val
+    counter += 1
+    yield outval
+
+export pwhite = |lo, hi, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if length == null then length = inf
+  lo_iter = as_iter lo
+  hi_iter = as_iter hi
+
+  while length > 0
+    hi_val = hi_iter.try_next()
+    lo_val = lo_iter.try_next()
+
+    if hi_val == null or lo_val == null then break
+
+    length -= 1
+
+    yield rrand lo_val, hi_val
+
+export plprand = |lo, hi, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if length == null then length = inf
+  iter1 = pwhite lo, hi, length
+  iter2 = pwhite lo, hi, length
+  while length > 0
+    length -= 1
+
+    yield iter1.try_next().min iter2.try_next()
+
+export phprand = |lo, hi, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if length == null then length = inf
+  iter1 = pwhite lo, hi, length
+  iter2 = pwhite lo, hi, length
+  while length > 0
+    length -= 1
+
+    yield iter1.try_next().max iter2.try_next()
+
+export pmeanrand = |lo, hi, length|
+  if lo == null then lo = 0
+  if hi == null then hi = 1
+  if length == null then length = inf
+  iter1 = pwhite lo, hi, length
+  iter2 = pwhite lo, hi, length
+  while length > 0
+    length -= 1
+
+    yield (iter1.try_next() + iter2.try_next()) * 0.5
+
+export pindex = |list_pat, index_pat, repeats|
+  if repeats == null then repeats = 1
+  index_iter = null
+  index = null
+  item = null
+  item_count = null
+  list_iter = as_iter list_pat
+  while repeats > 0
+    list = list_iter.try_next()
+    if list == null then break
+    index_iter = as_iter index_pat
+    item_count = 0
+    loop
+      index = index_iter.try_next()
+      if index == null then break
+      item_count += 1
+      item = list[index%list.size()]
+      if koto.type(item) == "Iterator"
+        iter = item.copy()
+        loop
+          next = iter.try_next()
+          if next == null then break
+          yield next
+      else
+        yield item
+    if item_count == 0 then break
+    repeats -= 1
+
+export pfsm = |list, repeats|
+  if list.is_empty() then return
+  if repeats == null then repeats = 1
+  item = null
+  index = 0
+  max_state = ((list.size() - 1) / 2).floor() - 1
+  while repeats > 0
+    index = 0
+    loop
+      index = (random.pick list[index]).clamp(0, max_state) * 2 + 2
+      item = list[index - 1]
+      if item == null then break
+      if koto.type(item) == "Iterator"
+        iter = item.copy()
+        loop
+          next = iter.try_next()
+          if next == null then break
+          yield next
+      else
+        yield item
+    repeats -= 1
+
+export place = |list, repeats, offset|
+  if repeats == null then repeats = 1
+  if offset == null then offset = 0
+  offset_iter = as_iter offset
+  # we don't use repeats here as it can be inf, which won't work for
+  # indexing
+  repeat_num = 0 
+  while repeats > 0
+    offset = offset_iter.try_next()
+    if offset == null then break
+    for i in 0..list.size()
+      item = list[(i + offset)%list.size()]
+      if koto.type(item) == "List"
+        item = item[repeat_num%item.size()]
+      item = as_iter item
+      yield item.try_next()
+    repeat_num += 1
+    repeats -= 1
+
+export ppoisson = |mean, length|
+  if mean == null then mean = 1
+  if length == null then length = inf
+  mean_iter = as_iter mean
+  while length > 0
+    mean_val = mean_iter.try_next()
+    if mean_val == null then break
+    inc = 0
+    test = random.number()
+    temp = (-1 * mean_val).exp()
+    while test > temp
+      inc += 1
+      test *= random.number()
+    yield inc
+    length -= 1
+
+export prand = |list, repeats|
+  if repeats == null then repeats = 1
+  while repeats > 0
+    item = random.pick list
+    if item == null then break
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+    repeats -= 1
+
+export prorate = |proportion, pattern|
+  if pattern == null then pattern = 1
+  iter = as_iter pattern
+  prop = as_iter proportion
+  loop
+    val = iter.try_next()
+    c = prop.try_next()
+    if val == null or c == null then break
+    if koto.type(c) == "List"
+      for el in c
+        yield el * val
+    yield c * val
+    yield (1 - c) * val
+
+export pseq = |list, repeats, offset|
+  if repeats == null then repeats = 1
+  if offset == null then offset = 0
+  offset = as_iter offset
+  while repeats > 0
+    offset_next = offset.try_next()
+    if offset_next == null then break
+    offset_next = offset_next
+    for n in 0..list.size()
+      event = list[(n + offset_next)%list.size()]
+      if koto.type(event) == "Iterator"
+        event = event.copy()
+        loop
+          next = event.try_next()
+          if next == null then break
+          yield next
+      else
+        yield event
+    repeats -= 1
+
+export pser = |list, repeats, offset|
+  if repeats == null then repeats = 1
+  if offset == null then offset = 0
+  offset = as_iter offset
+  n = 0 # we use it, because repeats can be inf
+  while repeats > 0
+    offset_next = offset.try_next()
+    if offset_next == null then break
+    item = list[(offset_next + n)%list.size()]
+    n += 1
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+
+    repeats -= 1
+
+export pseries = |start, step, length|
+  if start == null then start = 0
+  if step == null then step = 1
+  if length == null then length = inf
+  cur = as_iter start
+  cur = cur.try_next()
+  len = as_iter length
+  len = len.try_next()
+  step_iter = as_iter step
+  while len > 0
+    step_val = step_iter.try_next()
+    if step_val == null then break
+    outval = cur
+    cur += step_val
+    len -= 1
+    yield outval
+
+export pshuf = |list, repeats|
+  if repeats == null then repeats = 1
+  list = list.scramble()
+  while repeats > 0
+    for item in list
+      if koto.type(item) == "Iterator"
+        iter = item.copy()
+        loop
+          next = iter.try_next()
+          if next == null then break
+          yield next
+      else
+        yield item
+    repeats -= 1
+
+export pslide = |list, repeats, len, step, start, wrap_at_end|
+  if repeats == null then repeats = 1
+  if len == null then len = 3
+  if step == null then step = 1
+  if start == null then start = 0
+  if wrap_at_end == null then wrap_at_end = true
+  pos = start
+  step_iter = as_iter step
+  length_iter = as_iter len
+  while repeats > 0
+    length_val = length_iter.try_next()
+    if length_val == null then return
+    if wrap_at_end
+      for n in 0..length_val
+        item = list[(pos + n)%list.size()]
+        if koto.type(item) == "Iterator"
+          next = item.try_next()
+          if next == null then break
+          yield next
+        else
+          yield item
+    else
+      for n in 0..length_val
+        item = list.get(pos + n)
+        if item == null then return
+        if koto.type(item) == "Iterator"
+          next = item.try_next()
+          if next == null then break
+          yield next
+        else
+          yield item
+    step_val = step_iter.try_next()
+    if step_val == null then return
+    pos += step_val
+    repeats -= 1
+
+export psubdivide = |n, pattern|
+  durs = as_iter pattern
+  subdivisions = as_iter n
+  dur = durs.try_next()
+  subdivision = subdivisions.try_next()
+  while dur != null and subdivision != null
+    if subdivision > 0 # 0 skips it
+      if subdivision > 1
+        dur /= subdivision
+        for _ in 0..subdivision
+          yield dur
+      else
+        yield dur
+    dur = durs.try_next()
+    subdivision = subdivisions.try_next()
+
+export pswitch = |list, which|
+  if which == null then which = 0
+  index_iter = as_iter which
+  index = index_iter.try_next()
+  while index != null
+    item = list[index.floor()%list.size()]
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+    index = index_iter.try_next()
+
+export ptuple = |list, repeats|
+  if repeats == null then repeats = 1
+  while repeats > 0
+    saw_nil = false
+    streams = list.iter().each(|i| as_iter i).to_list()
+    while not saw_nil
+      tuple = []
+      for stream in streams
+        outval = stream.try_next()
+        if outval == null
+          saw_nil = true
+          break
+        tuple.push outval
+      yield tuple
+    repeats -= 1
+
+export pwalk = |list, step_pattern, direction_pattern, start_pos|
+  if direction_pattern == null then direction_pattern = 1
+  if start_pos == null then start_pos = 0
+  index = as_iter(start_pos).try_next()
+  step_iter = as_iter step_pattern
+  direction_iter = as_iter direction_pattern
+  direction = direction_iter.try_next()
+  if direction == null then direction = 1
+  step = step_iter.try_next()
+  while step != null
+    item = list[index]
+    if item == null then break
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+    step *= direction
+    if (index + step) < 0 or (index + step) >= list.size()
+      direction = direction_pattern.try_next()
+      if direction == null then direction = 1
+      step = step.abs() * direction.sign()
+    index = (index + step) % list.size()
+    step = step_iter.try_next()
+
+export pwrand = |list, weights, repeats|
+  if repeats == null then repeats = 1
+  w_iter = as_iter weights
+  while repeats > 0
+    w_val = w_iter.try_next()
+    if w_val == null then break
+    item = list[w_val.windex()]
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+    repeats -= 1
+
+export pxrand = |list, repeats|
+  if repeats == null then repeats = 1
+  index = list.size().rand().floor()
+  while repeats > 0
+    size = list.size()
+    index = (index + (size - 1).rand().floor() + 1) % size
+    item = list[index]
+    if koto.type(item) == "Iterator"
+      iter = item.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield item
+    repeats -= 1
+
+pn = |pattern, repeats|
+  while repeats > 0
+    if koto.type(pattern) == "Iterator"
+      iter = pattern.copy()
+      loop
+        next = iter.try_next()
+        if next == null then break
+        yield next
+    else
+      yield pattern
+    repeats -= 1
+
+
+@tests =
+
+  @pre_test: ||
+    random.seed 1
+
+  @test as_iter: ||
+    foo = as_iter 42
+    bar = as_iter (0..=2).iter()
+
+    for _ in 0..10
+      assert_eq foo.try_next(), 42
+
+    assert_eq bar.try_next(), 0
+    assert_eq bar.try_next(), 1
+    assert_eq bar.try_next(), 2
+    assert_eq bar.next(), null
+
+  @test rrand: ||
+    expected = [
+      0.9751433633515196,
+      4.1961629107021805,
+      -1.0,
+      2.806754195161999,
+      2.163094086962624,
+      -2.1,
+      0.3891182679308427,
+      3.4734730359398727,
+      -3.7,
+      -2.1,
+      0.16742843662497897,
+      -0.8,
+      4.005404771688904,
+      2.360824318658037,
+      0.46540275344657633,
+      2.1977127472603764,
+      -4.9,
+      -4.1,
+      -4.5,
+      3.6675608757469202
+    ]
+    for n in 0..20
+      assert_near expected[n], rrand(5, -5), 0.1
+
+  @test rand2: ||
+    expected = [
+      -1.0,
+      -4.2,
+      0.9656018093485486,
+      -2.8,
+      -2.2,
+      2.106102236811087,
+      -0.4,
+      -3.5,
+      3.7478107843589257,
+      2.0662407208556175,
+      -0.2,
+      0.772091371337079,
+      -4.0,
+      -2.4,
+      -0.5,
+      -2.2,
+      4.910323734014959,
+      4.123549281413304,
+      4.471174769069746,
+      -3.7
+    ]
+    for item in expected
+      assert_near 5.rand2(), item, 0.1
+
+  @test fold: ||
+    expected = [
+      2.9751433633515196,
+      2.1961629107021805,
+      2.9656018093485486,
+      2.806754195161999,
+      2.163094086962624,
+      2.106102236811087,
+      2.3891182679308427,
+      2.5265269640601273,
+      2.2521892156410743,
+      2.0662407208556175,
+      2.167428436624979,
+      2.772091371337079,
+      2.0054047716889043,
+      2.360824318658037,
+      2.4654027534465763,
+      2.1977127472603764,
+      2.910323734014959,
+      2.123549281413304,
+      2.471174769069746,
+      2.3324391242530798
+    ]
+    for item in expected
+      assert_near 5.rand2().fold(2, 3), item, 0.000001
+
+  @test round: ||
+    assert_eq 4.5.round(0.5), 4.5
+    assert_eq 0.01.round(0.5), 0
+    assert_eq 0.9.round(0.5), 1.0
+
+  @test number_wrap: ||
+    assert_near 1.1.wrap(0.0, 1.0), 0.1, 0.1
+    assert_near 1.1.wrap(0.0, -1.0), -0.9, 0.1
+    assert_near 2.1.wrap(2.0, -1.0), -0.9, 0.1
+
+  @test scramble: ||
+    original = (0..10).to_list()
+    result = original.scramble()
+    expected = [4, 0, 6, 2, 3, 8, 5, 1, 9, 7]
+    assert_eq result, expected
+    assert_ne original, expected
+
+  @test windex: ||
+    list = [0.1, 0.6, 0.3]
+    result = []
+    for _ in 0..100
+      result.push list.windex()
+    assert_eq result.iter().keep(|x| x == 0).count(), 9
+    assert_eq result.iter().keep(|x| x == 1).count(), 61
+    assert_eq result.iter().keep(|x| x == 2).count(), 30
+
+    list = [0.25, 0.25, 0.25, 0.25]
+    result = []
+    for _ in 0..100
+      result.push list.windex()
+    assert_eq result.iter().keep(|x| x == 0).count(), 19
+    assert_eq result.iter().keep(|x| x == 1).count(), 22
+    assert_eq result.iter().keep(|x| x == 2).count(), 32
+    assert_eq result.iter().keep(|x| x == 3).count(), 27
+
+  @test normalize_sum: ||
+    list = [1,3,10]
+    result = list.normalize_sum()
+    expected = [0.07142857142857142, 0.21428571428571427, 0.7142857142857143]
+    for n in 0..expected.size()
+      assert_near result[n], expected[n], 0.00001
+
+  @test iterator_add: ||
+    iter = pseq([1,2,3]).add(12)
+    expected = [13,14,15]
+    for item in expected
+      assert_eq iter.try_next(), item
+    iter = pseq([1,2,3], inf).add(pseq([1,2], inf))
+    expected = [2,4,4,3,3,5]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test iterator_sub: ||
+    iter = pseq([1,2,3]).sub(12)
+    expected = [-11, -10, -9]
+    for item in expected
+      assert_eq iter.try_next(), item
+    iter = pseq([1,2,3], inf).sub(pseq([1,2], inf))
+    expected = [0,0,2,-1,1,1]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test iterator_mul: ||
+    iter = pseq([1,2,3]).mul(12)
+    expected = [12, 24, 36]
+    for item in expected
+      assert_eq iter.try_next(), item
+    iter = pseq([1,2,3], inf).mul(pseq([1,2], inf))
+    expected = [1,4,3,2,2,6]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test iterator_div: ||
+    iter = pseq([2, 4, 6]).div(2)
+    expected = [1,2,3]
+    for item in expected
+      assert_eq iter.try_next(), item
+    iter = pseq([2,4,6], inf).div(pseq([1,2], inf))
+    expected = [2,2,6,1,4,3]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test iterator_mod: ||
+    iter = pseq([2, 3, 4]).mod(2)
+    expected = [0,1,0]
+    for item in expected
+      assert_eq iter.try_next(), item
+    iter = pseq([2,4,6], inf).mod(pseq([2,3], inf))
+    expected = [0, 1, 0, 2, 0, 0]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test list_add: ||
+    result = [1,2,3].add(12)
+    assert_eq [13,14,15], result
+    result = [1,2,3].add([4,3,2,1])
+    assert_eq [5,5,5], result
+
+  @test list_sub: ||
+    result = [1,2,3].sub(1)
+    assert_eq [0, 1, 2], result
+    result = [1,2,3].sub([4,3,2,1])
+    assert_eq [-3,-1,1], result
+
+  @test list_mul: ||
+    result = [1,2,3].mul(12)
+    assert_eq [12,24,36], result
+    result = [1,2,3].mul([4,3,2,1])
+    assert_eq [4,6,6], result
+
+  @test list_div: ||
+    result = [2,4,6].div(2)
+    assert_eq [1,2,3], result
+    result = [2,4,6].div([1,2,3,4])
+    assert_eq [2,2,2], result
+
+  @test list_mod: ||
+    result = [1,2,3].mod(2)
+    assert_eq [1,0,1], result
+    result = [1,2,3].mod([4,3,2,1])
+    assert_eq [1,2,1], result
+
+  @test pbeta: ||
+    iter = pbeta 0, 1, 0.1, 0.1
+    expected = [
+      0.9999998990337543,
+      0.9999548860491485,
+      0.00010282297200561144,
+      0.9999841803051991,
+      0.8942349639813197,
+      0.14472875841427035,
+      0.000057777083121868925,
+      0.9919420307570712,
+      0.9999999969630666,
+      0.03399595967190692,
+      0.9999999999999977,
+      0.000001659888410845819,
+      0.9988058974153853,
+      0.21815112172104226,
+      0.9720302615745875,
+      0.00000005155530228926202,
+      0.5899264995341909,
+      0.0000005008245872248955,
+      0.00000011726299749942268,
+      0.9623539739094727
+    ]
+
+    for item in expected
+      assert_near iter.try_next(), item, 0.000001
+
+  @test pbrown: ||
+    iter = pbrown 0, 1, 0.1
+    expected = [
+      0.31856240545080444,
+      0.3378744416377754,
+      0.2817393577345354,
+      0.23847747599528293,
+      0.2805995207315047,
+      0.27281715537288787,
+      0.20334769465409042,
+      0.2783039103412689,
+      0.3196287247583812,
+      0.31628015602588166,
+      0.33172198345262327,
+      0.2516138880188452,
+      0.20439740164568448,
+      0.19508934657675295,
+      0.15113509163154543,
+      0.2493415663118446,
+      0.33181255194011067,
+      0.42123604732150555,
+      0.34788482980656715,
+      0.31662165206066295
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pgbrown: ||
+    iter = pgbrown 0, 1, 0.2
+    expected = [
+      0.33492984710645657,
+      0.3478662017612897,
+      0.3088112049153469,
+      0.2820916972617393,
+      0.3058562554452907,
+      0.3010956851911033,
+      0.2592617754411378,
+      0.29812833855995136,
+      0.3227685350868954,
+      0.3206069098380421,
+      0.33050842298512195,
+      0.2775556224048027,
+      0.25134521987866165,
+      0.24666614958277508,
+      0.2249820959325471,
+      0.26917149294798776,
+      0.3135691696008926,
+      0.3696500719799991,
+      0.315421506311564,
+      0.2956993490781655
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pcauchy: ||
+    iter = pcauchy 0, 10
+    expected = [
+      31.614753569718207,
+      2.5804168431514087,
+      -31.9,
+      8.237041317740534,
+      12.37735014943384,
+      -12.8,
+      81.39497342324482,
+      5.20067711131448,
+      -4.2,
+      -13.2,
+      189.94161629372303,
+      -40.4,
+      3.2304351210598985,
+      10.915059221862403,
+      67.9064353716456,
+      12.105623969431585,
+      -0.3,
+      -2.8,
+      -1.7
+    ]
+
+    for item in expected
+      assert_near iter.try_next(), item, 0.1
+
+  @test pclump: ||
+    iter = pclump 2, pseq([1,2,3])
+    expected = [[1,2], [3], null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pclutch: ||
+    iter = pclutch pseq([0,1,2,3], 2), pseq([true, true, false], 3)
+    expected = [0, 1, 1, 2, 3, 3, 0, 1, 1, null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pconst: ||
+    iter = pconst 5, pseq([1,2,0.5,0.1], 2)
+    expected = [1, 2, 0.5, 0.1, 1, 0.40000000000000036, null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pdup: ||
+    iter = pdup 5, pseq([42,27], inf)
+    expected = [42,42,42,42,42]
+
+    for item in expected
+      assert_eq iter.try_next(), item
+
+    iter = pdup pseq([2,3,4],2), pseq([42,27], inf)
+    expected = [
+      42, 42, 27, 27, 27, 42, 42, 42, 42, 27, 27, 42, 42, 42, 27, 27, 27, 27
+    ]
+
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pexprand: ||
+    iter = pexprand()
+    expected = [
+      0.004073264898342393,
+      0.0002096692953917505,
+      0.024335525215762568,
+      0.0007538732302153986,
+      0.0013638366759884263,
+      0.06957302628982683,
+      0.006987996725861051,
+      0.0004079536147437218,
+      0.3155907850542266,
+      0.06706505550246429,
+      0.008570943364312574,
+      0.020362755589543965,
+      0.00024994133854208526,
+      0.001136763897925816,
+      0.006513867175749547,
+      0.0013210367550165964,
+      0.920724063165561,
+      0.44608714942845745,
+      0.6144264564695681,
+      0.0003411737819374109
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pgauss: ||
+    iter = pgauss 0, 100
+    expected = [
+      65.2803895210771,
+      99.76188005194601,
+      -153.9,
+      101.87259500918593,
+      -49.8,
+      -56.2,
+      214.02805155480215,
+      123.50391269963103,
+      -7.0,
+      24.484826973999425,
+      18.04240588641478,
+      11.678758639491882,
+      225.53992019396122,
+      112.69808127494085,
+      129.97330983254776,
+      -12.6,
+      -101.2,
+      -76.0,
+      -50.2
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.1
+
+  @test pgeom: ||
+    iter = pgeom 1, 1.1
+    expected = [
+      1,
+      1.1,
+      1.2100000000000002,
+      1.3310000000000004,
+      1.4641000000000006,
+      1.6105100000000008,
+      1.771561000000001,
+      1.9487171000000014,
+      2.1435888100000016,
+      2.357947691000002,
+      2.5937424601000023,
+      2.853116706110003,
+      3.1384283767210035,
+      3.4522712143931042,
+      3.797498335832415,
+      4.177248169415656,
+      4.594972986357222,
+      5.054470284992944,
+      5.559917313492239,
+      6.115909044841463
+    ]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pwhite: ||
+    iter = pwhite()
+    expected = [
+      0.40248566366484806,
+      0.08038370892978197,
+      0.5965601809348549,
+      0.2193245804838001,
+      0.28369059130373764,
+      0.7106102236811087,
+      0.46108817320691575,
+      0.15265269640601276,
+      0.8747810784358925,
+      0.7066240720855618,
+      0.4832571563375021,
+      0.5772091371337079,
+      0.09945952283110959,
+      0.2639175681341963,
+      0.45345972465534234,
+      0.28022872527396236,
+      0.9910323734014959,
+      0.9123549281413303,
+      0.9471174769069746,
+      0.13324391242530798
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.0001
+
+  @test plprand: ||
+    iter = plprand()
+    expected = [
+      0.08038370892978197,
+      0.2193245804838001,
+      0.28369059130373764,
+      0.15265269640601276,
+      0.7066240720855618,
+      0.4832571563375021,
+      0.09945952283110959,
+      0.28022872527396236,
+      0.9123549281413303,
+      0.13324391242530798,
+      0.34368411127047893,
+      0.013697542700323417,
+      0.04891968420549486,
+      0.2681324714369647,
+      0.08841648470140351,
+      0.6949953001955277,
+      0.10824545758198034,
+      0.7046505346722584,
+      0.22342087589891269,
+      0.12823076336371653
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test phprand: ||
+    iter = phprand()
+    expected = [
+      0.40248566366484806,
+      0.5965601809348549,
+      0.7106102236811087,
+      0.46108817320691575,
+      0.8747810784358925,
+      0.5772091371337079,
+      0.2639175681341963,
+      0.45345972465534234,
+      0.9910323734014959,
+      0.9471174769069746,
+      0.4803022472664801,
+      0.3973344362253063,
+      0.18512952356979562,
+      0.5255249712817147,
+      0.10045458891458559,
+      0.9910167749095551,
+      0.5796720287967574,
+      0.7307476136117299,
+      0.953136638602066,
+      0.6325227106342147
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pmeanrand: ||
+    iter = pmeanrand()
+    expected = [
+      0.24143468629731502,
+      0.4079423807093275,
+      0.4971504074924232,
+      0.30687043480646425,
+      0.7907025752607271,
+      0.530233146735605,
+      0.18168854548265295,
+      0.36684422496465235,
+      0.9516936507714131,
+      0.5401806946661413,
+      0.4119931792684795,
+      0.20551598946281485,
+      0.11702460388764524,
+      0.3968287213593397,
+      0.09443553680799455,
+      0.8430060375525414,
+      0.34395874318936887,
+      0.7176990741419942,
+      0.5882787572504893,
+      0.3803767369989656
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pindex: ||
+    iter = pindex(
+      [7, 13, 12, 2, 2, 2, 5], 
+      pseq([0, 0, 2, 0, 4, 6, 7], inf), 
+      inf)
+    expected = [7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5, 7, 7, 7, 12, 7, 2, 5]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pfsm: ||
+    iter = pfsm([
+        [0,1],
+        67, [0, 0, 3],
+        72, [2],
+        73, [0, 2],
+        pseq([74, 75, 76, 77]), [2, 3, 3],
+        null, null], inf)
+    expected = [67, 67, 74, 75, 76, 77, 74, 75, 76, 77, 73, 73, 73, 67, 67, 74, 75, 76, 77, 73]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test place: ||
+    iter = place [1, [2, 5], [3, 6]], inf
+    expected = [1,2,3,1,5,6,1,2]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+    iter = place(
+      [1, pseq([2, 5], inf), pseq([3, 6], inf)], inf)
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test ppoisson: ||
+    iter = ppoisson 10
+    expected = [9, 10, 4, 8, 14, 15, 11, 13, 7, 8, 15, 7, 23, 7, 7, 12, 8, 9, 12, 8]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test prand: ||
+    iter = prand [
+      pseq([0,1]), 
+      pseq([2,3]), 
+      pseq([4,5])
+    ], inf
+    expected = [2, 3, 0, 1, 0, 1, 4, 5, 2, 3, 0, 1, 4, 5, 4, 5, 2, 3, 2, 3]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+    iter = prand (0..10).to_list(), inf
+    expected = [4, 9, 9, 1, 3, 0, 0, 5, 1, 1, 7, 7, 2, 9, 1, 6, 8, 9, 3, 6]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test prorate: ||
+    iter = prorate pseq([0.35, 0.5, 0.8])
+    expected = [0.35, 0.65, 0.5, 0.5, 0.8, 0.19999999999999996]
+    for item in expected
+      assert_near iter.try_next(), item, 0.001
+
+    iter = prorate pseq([0.35, 0.5, 0.8]), prand([20, 1], inf)
+    expected = [7.0, 13.0, 0.5, 0.5, 16.0, 3.999999999999999]
+    for item in expected
+      assert_near iter.try_next(), item, 0.001
+
+  @test pseq: ||
+    foo = pseq [0,1,2], inf
+    expected = [0,1,2,0,1]
+    for item in expected
+      assert_eq foo.try_next(), item
+
+    foo = pseq [pseq([0,2], 2), pseq([1,3], 2)], inf
+    expected = [0,2,0,2,1,3,1,3]
+    for _ in 0..2
+      for item in expected
+        assert_eq foo.try_next(), item
+
+    foo = pseq [0,1,2], inf, (pseq [0,1,4])
+    expected = [0,1,2,1,2,0,1,2,0,()]
+    for item in expected
+      assert_eq foo.try_next(), item
+
+  @test pser: ||
+    iter = pser [1, 2, 3], 5
+    expected = [1, 2, 3, 1, 2, null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pseries: ||
+    iter = pseries 300, 20, 20
+    expected = [
+      300,
+      320,
+      340,
+      360,
+      380,
+      400,
+      420,
+      440,
+      460,
+      480,
+      500,
+      520,
+      540,
+      560,
+      580,
+      600,
+      620,
+      640,
+      660,
+      680
+    ]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pshuf: ||
+    iter = pshuf (1..5).to_list(), 3
+    expected = [2, 1, 4, 3, 2, 1, 4, 3, 2, 1, 4, 3, null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pslide: ||
+    iter = pslide [1, 2, 3, 4, 5], inf
+    expected = [1, 2, 3, 2, 3, 4, 3, 4, 5, 4, 5, 1, 5, 1, 2, 1, 2, 3, 2, 3]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test psubdivide: ||
+    iter = psubdivide(
+      pseq([1,1,1,1,1,2,2,2,2,2,0,1,3,4,0], inf),
+      pseq([0.5, 1, 2, 0.25,0.25],inf)
+    )
+    expected = [
+      0.5,
+      1,
+      2,
+      0.25,
+      0.25,
+      0.25,
+      0.25,
+      0.5,
+      0.5,
+      1.0,
+      1.0,
+      0.125,
+      0.125,
+      0.125,
+      0.125,
+      1,
+      0.6666666666666666,
+      0.6666666666666666,
+      0.6666666666666666,
+      0.0625
+    ]
+    for item in expected
+      assert_near iter.try_next(), item, 0.00001
+
+  @test pswitch: ||
+    a = pseq [1, 2, 3], 2
+    b = pseq [65, 76]
+    iter = pswitch [a, b, 800], pseq([2, 2, 0, 1], inf)
+    expected = [800,800,1,2,3,1,2,3,65,76,800,800,1,2,3,1,2,3,65,76]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test ptuple: ||
+    a = pseq [1, 2, 3], inf
+    b = pseq [65, 76], inf
+    iter = ptuple [a, a.copy(), b], inf
+    expected = [
+      [1, 1, 65],
+      [2, 2, 76],
+      [3, 3, 65],
+      [1, 1, 76],
+      [2, 2, 65],
+      [3, 3, 76],
+      [1, 1, 65],
+      [2, 2, 76]
+    ]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pwalk: ||
+    iter = pwalk(
+      [1, 2, 3, 4, 5, 6, 7], 
+      pseq([1], inf), 
+      pseq([1, -1], inf) 
+    )
+    expected = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 2, 3, 4, 5, 6, 7, 6]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pwrand: ||
+    iter = pwrand([1, 2, 3], [1,3,5].normalize_sum(), inf)
+    result = []
+    for _ in 0..100
+      result.push iter.try_next()
+    assert_eq result.iter().take(100).keep(|x| x == 1).count(), 12
+    assert_eq result.iter().take(100).keep(|x| x == 2).count(), 32
+    assert_eq result.iter().take(100).keep(|x| x == 3).count(), 56
+
+  @test pxrand: ||
+    iter = pxrand [1, 2, 3], 10
+    expected = [3, 2, 3, 1, 3, 1, 2, 1, 3, 1, null]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+  @test pn: ||
+    iter = pn pseq([1,2,3]), 2
+    expected = [1,2,3,1,2,3,()]
+    for item in expected
+      assert_eq iter.try_next(), item
+
+    iter = pn(1, 4)
+    expected = [1,1,1,1,()]
+    for item in expected
+      assert_eq iter.try_next(), item
