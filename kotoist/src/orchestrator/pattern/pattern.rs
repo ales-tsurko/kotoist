@@ -129,36 +129,6 @@ pub(crate) struct ScheduledEvent {
     pub(crate) event: Event,
 }
 
-// impl ScheduledEvent {
-//     pub(crate) fn into_vst_midi(self, length: f64) -> Vec<MidiEvent> {
-//         self.event
-//             .value
-//             .iter()
-//             .filter_map(|value| match value {
-//                 EventValue::Note(nn, vel, ch) => {
-//                     let status = if *vel > 0 { 0x90 } else { 0x80 };
-//                     Some([status + ch, *nn, *vel])
-//                 }
-//                 &EventValue::Rest => None,
-//             })
-//             .map(|midi_data| MidiEvent {
-//                 event_type: EventType::Midi,
-//                 byte_size: 8,
-//                 delta_frames: 0,
-//                 flags: MidiEventFlags::REALTIME_EVENT.bits(),
-//                 note_length: length as i32,
-//                 note_offset: 0,
-//                 midi_data,
-//                 _midi_reserved: 0,
-//                 detune: 0,
-//                 note_off_velocity: 0,
-//                 _reserved1: 0,
-//                 _reserved2: 0,
-//             })
-//             .collect()
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub(crate) struct Event {
     pub(crate) value: Vec<EventValue>,

@@ -165,6 +165,8 @@ impl Player {
             match stream.pattern.try_next(frame_offset) {
                 Ok(event) => return event.map(|e| self.schedule_events(position, beat_length, e)),
                 Err(e) => {
+                    // we need to remove stream here as subsequent calls of next, will crash Koto
+                    self.stream = None;
                     self.pipe_in.send(PipeMessage::Error(format!("{}\n", e)));
                     return None;
                 }

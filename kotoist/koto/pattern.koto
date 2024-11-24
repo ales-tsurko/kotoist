@@ -106,6 +106,46 @@ list.normalize_sum = ||
   divisor = self.iter().sum()
   return self.iter().each(|x| x / divisor).to_list()
 
+list.add = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x + other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a + b).to_list()
+  else
+    throw "Unsupported type for `list.add`"
+
+list.sub = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x - other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a - b).to_list()
+  else
+    throw "Unsupported type for `list.sub`"
+
+list.mul = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x * other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a * b).to_list()
+  else
+    throw "Unsupported type for `list.mul`"
+
+list.div = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x / other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a / b).to_list()
+  else
+    throw "Unsupported type for `list.div`"
+
+list.mod = |other|
+  if koto.type(other) == "Int" or koto.type(other) == "Float"
+    return self.iter().each(|x| x % other).to_list()
+  else if koto.type(other) == "List"
+    return self.iter().zip(other.iter()).each(|(a, b)| a % b).to_list()
+  else
+    throw "Unsupported type for `list.mod`"
+
 iterator.copy = || return koto.copy(self)
 
 iterator.try_next = ||
@@ -114,43 +154,78 @@ iterator.try_next = ||
 
 iterator.add = |other|
   if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| x + other)
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.add(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x + other
+      else
+        throw "Unsupported type for `iterator.add`"
+      )
   else if koto.type(other) == "Iterator"
     return self.zip(other).each(|(a, b)| a + b)
   else
-    return self
+    throw "Unsupported type for `iterator.add`"
 
 iterator.sub = |other|
   if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| x - other)
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.sub(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x - other
+      else
+        throw "Unsupported type for `iterator.sub`"
+      )
   else if koto.type(other) == "Iterator"
     return self.zip(other).each(|(a, b)| a - b)
   else
-    return self
+    throw "Unsupported type for `iterator.sub`"
 
 iterator.mul = |other|
   if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| x * other)
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.mul(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x * other
+      else
+        throw "Unsupported type for `iterator.mul`"
+      )
   else if koto.type(other) == "Iterator"
     return self.zip(other).each(|(a, b)| a * b)
   else
-    return self
+    throw "Unsupported type for `iterator.mul`"
 
 iterator.div = |other|
   if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| x / other)
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.div(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x / other
+      else
+        throw "Unsupported type for `iterator.div`"
+      )
   else if koto.type(other) == "Iterator"
     return self.zip(other).each(|(a, b)| a / b)
   else
-    return self
+    throw "Unsupported type for `iterator.div`"
 
 iterator.mod = |other|
   if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| x % other)
+    return self.each(|x| 
+      if koto.type(x) == "List"
+        x.mod(other)
+      else if koto.type(x) == "Int" or koto.type(other) == "Float"
+        x % other
+      else
+        throw "Unsupported type for `iterator.mod`"
+      )
   else if koto.type(other) == "Iterator"
     return self.zip(other).each(|(a, b)| a % b)
   else
-    return self
+    throw "Unsupported type for `iterator.mod`"
 
 export pbeta = |lo, hi, prob1, prob2, length|
   if lo == null then lo = 0
@@ -999,6 +1074,36 @@ pn = |pattern, repeats|
     expected = [0, 1, 0, 2, 0, 0]
     for item in expected
       assert_eq iter.try_next(), item
+
+  @test list_add: ||
+    result = [1,2,3].add(12)
+    assert_eq [13,14,15], result
+    result = [1,2,3].add([4,3,2,1])
+    assert_eq [5,5,5], result
+
+  @test list_sub: ||
+    result = [1,2,3].sub(1)
+    assert_eq [0, 1, 2], result
+    result = [1,2,3].sub([4,3,2,1])
+    assert_eq [-3,-1,1], result
+
+  @test list_mul: ||
+    result = [1,2,3].mul(12)
+    assert_eq [12,24,36], result
+    result = [1,2,3].mul([4,3,2,1])
+    assert_eq [4,6,6], result
+
+  @test list_div: ||
+    result = [2,4,6].div(2)
+    assert_eq [1,2,3], result
+    result = [2,4,6].div([1,2,3,4])
+    assert_eq [2,2,2], result
+
+  @test list_mod: ||
+    result = [1,2,3].mod(2)
+    assert_eq [1,0,1], result
+    result = [1,2,3].mod([4,3,2,1])
+    assert_eq [1,2,1], result
 
   @test pbeta: ||
     iter = pbeta 0, 1, 0.1, 0.1
