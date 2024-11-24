@@ -1,63 +1,47 @@
 Kotoist
 =======
 
-VST plugin for live coding using [Koto](https://github.com/koto-lang/koto)
-programming language.
+VST plugin for live coding using [Koto](koto.dev/) programming language.
+
+![Screenshot Ableton](screenshots/screenshot-ableton.jpg)
+![Screenshot FL Studio](screenshots/screenshot-fl.jpg)
+
+
+
+
+## Usage
+
+Checkout documentation: https://kotoist.alestsurko.by.
+
+Tested in **Ableton** and **FL Studio** on macOS.
+
+Might not work in **Reaper** as it steals keyboard input from the plugin.
+Previous workaround with enabling option **"Send all keyboard input to plugin"**
+doesn't work anymore.
 
 
 
 
 ## Build
 
-Use `./build.sh win` on Windows or `./build.sh mac` on macOS.
-
-If you wish to build manually, you should build GUI first:
+On macOS:
 
 ```
-cd gui
-yarn
-yarn build
+cargo xtask bundle-universal -p kotoist --release
 ```
-
-Then you can build the plugin:
+On other systems:
 
 ```
-cd ..
-cargo build
+cargo xtask bundle -p kotoist --release
 ```
-
-On OS X VST plugins are packed inside of loadable bundles. To pack your VST as a
-loadable bundle you may use the osx_vst_bundler.sh script this library provides. 
-
-Example: 
-
-```
-./osx_vst_bundler.sh Plugin target/release/plugin.dylib
-Creates a Plugin.vst bundle
-```
-
-[ref](https://github.com/RustAudio/vst-rs#packaging-on-os-x)
-
-
-
-
-## REAPER Specific
-
-To make the plugin work as expected, you should right-click on the plugin in the
-FX Rack and choose "Send all keyboard input to plugin".
-
-
-
-
-## FL Studio Specific
-
-The debug build initialize a log file on your desktop. At least on macOS this
-crashes FL Studio on start. To prevent it, comment out the log initialization.
 
 
 
 
 ## Deployment
+
+> [!WARNING]
+> Needs update.
 
 Just tag a new version and push it to remote.
 
