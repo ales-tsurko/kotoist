@@ -49,11 +49,13 @@ impl Plugin for Kotoist {
     const URL: &'static str = "https://kotoist.alestsurko.by";
     const EMAIL: &'static str = "ales.tsurko@gmail.com";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
-        main_input_channels: NonZeroU32::new(NUM_CHANNELS),
-        main_output_channels: NonZeroU32::new(NUM_CHANNELS),
-        ..AudioIOLayout::const_default()
-    }];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+
+    // const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
+    //     main_input_channels: NonZeroU32::new(NUM_CHANNELS),
+    //     main_output_channels: NonZeroU32::new(NUM_CHANNELS),
+    //     ..AudioIOLayout::const_default()
+    // }];
     const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::MidiCCs;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -159,7 +161,7 @@ impl ClapPlugin for Kotoist {
 }
 
 impl Vst3Plugin for Kotoist {
-    const VST3_CLASS_ID: [u8; 16] = *b"KotoistAles22222";
+    const VST3_CLASS_ID: [u8; 16] = *b"KotoistAlesCurko";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[
         Vst3SubCategory::Instrument,
         Vst3SubCategory::Fx,
@@ -167,5 +169,6 @@ impl Vst3Plugin for Kotoist {
     ];
 }
 
-nih_export_clap!(Kotoist);
+// CLAP didn't produce midi outs during testing.
+// nih_export_clap!(Kotoist);
 nih_export_vst3!(Kotoist);

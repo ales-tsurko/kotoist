@@ -97,6 +97,10 @@ fn text_editor(ctx: &egui::Context, ui: &mut egui::Ui, params: &Arc<Parameters>)
             })
             .unwrap_or_default();
 
+        if ui.allocate_response(ui.available_size(), egui::Sense::click()).clicked() {
+            output.response.request_focus();
+        }
+
         ctx.input_mut(|i| {
             // Cmd-Enter - eval all/selection
             if i.consume_shortcut(&egui::KeyboardShortcut::new(
