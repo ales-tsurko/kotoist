@@ -52,7 +52,8 @@ impl Orchestrator {
 struct Player {
     pipe_in: PipeIn,
     // 1. user called midi_out function and set the pattern with quantization
-    requested: Option<(Pattern, f64)>,
+    requested: Option<Pattern>,
+    quantization: f64,
     // 2. the tick is called and the requested pattern scheduled
     scheduled: Option<ScheduledPattern>,
     // 3. the pattern is what should currently play
@@ -67,6 +68,7 @@ impl Player {
         Player {
             pipe_in,
             requested: None,
+            quantization: 0.0,
             scheduled: None,
             stream: None,
             next_note_on_pos: 0.0,
@@ -76,21 +78,34 @@ impl Player {
     }
 
     fn set_pattern(&mut self, pattern: Pattern, quantization: f64) {
-        self.requested = Some((pattern, quantization));
+        self.requested = Some(pattern);
+        self.quantization = quantization;
     }
 
     fn tick(&mut self, is_playing: bool, transport: &Transport, block_size: usize) -> Vec<Event> {
         if !is_playing {
             self.next_note_on_pos -= self.last_position;
+            // return the note offs (if any) to prevent endless tails
+            // after that just clone and return an empty vector (because of .clear())
+            let res = self
+                .note_offs
+                .clone()
+                .into_iter()
+                .map(|e| e.event)
+                .collect();
             self.note_offs.clear();
-            return vec![];
+
+            return res;
         }
 
-        if let Some((pattern, quantization)) = self.requested.take() {
-            self.schedule_pattern(pattern, transport, quantization);
+        if let Some(pattern) = self.requested.take() {
+            self.scheduled = Some(ScheduledPattern {
+                position: self.quantized_position(transport),
+                pattern,
+            });
         }
 
-        self.adjust_position(transport.position);
+        self.adjust_position(transport, block_size);
 
         self.try_queue(self.last_position);
 
@@ -106,24 +121,26 @@ impl Player {
         result
     }
 
-    fn schedule_pattern(&mut self, pattern: Pattern, transport: &Transport, quantization: f64) {
-        let position = transport.position;
-        let quant_samples = quantization * transport.beat_length;
-        let offset = quant_samples - (position % quant_samples);
-        let position = offset + position;
-        self.scheduled = Some(ScheduledPattern { position, pattern });
+    // get next quantazied position - i.e. the position at which the pattern should play taking the
+    // quantization into account
+    fn quantized_position(&self, transport: &Transport) -> f64 {
+        let quant_samples = self.quantization * transport.beat_length;
+        let offset = quant_samples - (transport.position % quant_samples);
+        transport.position + offset
     }
 
-    fn adjust_position(&mut self, position: f64) {
-        if position < self.last_position {
-            let last_position = self.last_position;
-            self.next_note_on_pos -= last_position;
+    // adjust next note on position on cursor jump
+    fn adjust_position(&mut self, transport: &Transport, block_size: usize) {
+        // if the difference is more than block_size + a sample, we consider it a jump
+        if (transport.position - self.last_position).abs() > (block_size + 1) as f64 {
+            self.next_note_on_pos = self.quantized_position(transport);
+            // call note off for all on the next sample
             self.note_offs
                 .iter_mut()
-                .for_each(|v| v.position -= last_position);
+                .for_each(|v| v.position = transport.position + 1.0);
         }
 
-        self.last_position = position;
+        self.last_position = transport.position;
     }
 
     fn note_offs_at(&mut self, position: f64) -> Vec<Event> {
