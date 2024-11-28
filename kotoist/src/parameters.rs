@@ -70,7 +70,7 @@ impl Parameters {
         thread::spawn(move || {
             let mut koto = interpreter::init_koto(orchestrator, pipe_in.clone());
             loop {
-                if let Ok(message) = interpreter_receiver.try_recv() {
+                if let Ok(message) = interpreter_receiver.recv() {
                     match message {
                         InterpreterMessage::EvalSnippet(index) => {
                             let code = snippets[index].code.read().unwrap();
