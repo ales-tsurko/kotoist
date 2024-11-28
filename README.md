@@ -13,7 +13,8 @@ VST plugin for live coding using [Koto](koto.dev/) programming language.
 
 Checkout documentation: https://kotoist.alestsurko.by.
 
-Tested in **Ableton** and **FL Studio** on macOS.
+Tested in **Ableton** and **FL Studio** on macOS. Also tested in **Logic Pro**
+via [Element](https://kushview.net/element/).
 
 Might not work in **Reaper** as it steals keyboard input from the plugin.
 Previous workaround with enabling option **"Send all keyboard input to plugin"**
