@@ -7,7 +7,7 @@ use nih_plug_egui::{
     egui::{self, containers::ScrollArea},
 };
 
-use crate::parameters::Parameters;
+use crate::parameters::{InterpreterMessage, Parameters};
 use crate::pipe::{Message as PipeMessage, PipeOut};
 
 pub(crate) const WINDOW_SIZE: (u32, u32) = (800, 600);
@@ -24,7 +24,7 @@ pub(crate) fn create_editor(
             egui::SidePanel::left("pad-selector")
                 .exact_width(100.0)
                 .show(egui_ctx, |ui| {
-                    side_panel(ui, params.clone());
+                    side_panel(ui, state, params.clone());
                 });
 
             egui::TopBottomPanel::bottom("console")
@@ -36,48 +36,57 @@ pub(crate) fn create_editor(
             egui::CentralPanel::default()
                 .frame(egui::Frame::default().fill(bg))
                 .show(egui_ctx, |ui| {
-                    text_editor(egui_ctx, ui, &params);
+                    text_editor(egui_ctx, ui, state, &params);
                 });
         },
     )
 }
 
-fn side_panel(ui: &mut egui::Ui, params: Arc<Parameters>) {
+fn side_panel(ui: &mut egui::Ui, state: &mut GuiState, params: Arc<Parameters>) {
     {
         let selection = params.selected_snippet_index();
-        let selection = &params.snippets.read().unwrap()[selection];
+        let Ok(pk) = &params.snippets[selection].piano_key.try_read() else {
+            return;
+        };
         ui.add_space(6.0);
-        ui.label(format!("Snippets | {}", selection.piano_key.name));
+        ui.label(format!("Snippets | {}", pk.name));
         ui.add_space(6.0);
     }
 
     ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-        let snippets = params.snippets.read().unwrap();
-        for (index, snippet) in snippets.iter().enumerate().rev() {
-            let color = if !snippet.code.is_empty() {
-                egui::Color32::LIGHT_RED
-            } else if snippet.piano_key.is_black {
-                egui::Color32::BLACK
-            } else {
-                egui::Color32::WHITE
-            };
-            if ui
-                .add_sized(
-                    [ui.available_width(), 10.0],
-                    egui::Button::new(&snippet.piano_key.name).fill(color),
-                )
-                .clicked()
+        for (index, snippet) in params.snippets.iter().enumerate().rev() {
+            if let (Ok(code), Ok(piano_key)) =
+                (snippet.code.try_read(), snippet.piano_key.try_read())
             {
-                params.set_selected_snippet_index(index);
+                let color = if !code.is_empty() {
+                    egui::Color32::LIGHT_RED
+                } else if piano_key.is_black {
+                    egui::Color32::BLACK
+                } else {
+                    egui::Color32::WHITE
+                };
+                if ui
+                    .add_sized(
+                        [ui.available_width(), 10.0],
+                        egui::Button::new(&piano_key.name).fill(color),
+                    )
+                    .clicked()
+                {
+                    params.set_selected_snippet_index(index);
+                    state.text_buffer = code.clone();
+                }
             }
         }
     });
 }
 
-fn text_editor(ctx: &egui::Context, ui: &mut egui::Ui, params: &Arc<Parameters>) {
+fn text_editor(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    state: &mut GuiState,
+    params: &Arc<Parameters>,
+) {
     ScrollArea::both().stick_to_bottom(true).show(ui, |ui| {
-        let index = params.selected_snippet_index();
-        let mut snippets = params.snippets.write().unwrap();
         let output = CodeEditor::default()
             .id_source("code editor")
             .with_rows(1)
@@ -86,14 +95,22 @@ fn text_editor(ctx: &egui::Context, ui: &mut egui::Ui, params: &Arc<Parameters>)
             .with_theme(ColorTheme::AYU_MIRAGE)
             .with_syntax(koto_syntax())
             .with_numlines(true)
-            .show(ui, &mut snippets[index].code);
+            .show(ui, &mut state.text_buffer);
+
+        if output.response.changed() {
+            let index = params.selected_snippet_index();
+            params.send_interpreter_msg(InterpreterMessage::SetSnippet(
+                index,
+                state.text_buffer.clone(),
+            ));
+        }
 
         let selected_text = output
             .cursor_range
             .map(|text_cursor_range| {
                 use egui::TextBuffer as _;
                 let selected_chars = text_cursor_range.as_sorted_char_range();
-                snippets[index].code.char_range(selected_chars)
+                state.text_buffer.char_range(selected_chars)
             })
             .unwrap_or_default();
 
@@ -111,12 +128,12 @@ fn text_editor(ctx: &egui::Context, ui: &mut egui::Ui, params: &Arc<Parameters>)
                 egui::Key::Enter,
             )) {
                 let code = if selected_text.is_empty() {
-                    &snippets[index].code
+                    &state.text_buffer
                 } else {
                     selected_text
                 };
 
-                params.eval_code(code);
+                params.send_interpreter_msg(InterpreterMessage::EvalCode(code.to_owned()));
             }
         });
     });
@@ -137,7 +154,7 @@ fn bottom_panel(
         ui.add_space(ui.available_width() - 50.0);
         if ui.button("🚀 Run").clicked() {
             let index = params.selected_snippet_index();
-            params.eval_snippet_at(index);
+            params.send_interpreter_msg(InterpreterMessage::EvalSnippet(index));
         }
     });
     ScrollArea::both().stick_to_bottom(true).show(ui, |ui| {
@@ -205,4 +222,7 @@ fn koto_syntax() -> Syntax {
 #[derive(Debug, Default)]
 struct GuiState {
     console: Vec<PipeMessage>,
+    // to prevent locks, we clone the whole snippet code, when the selected snippet is changed. then
+    // we update the snippet in params only when this value is update
+    text_buffer: String,
 }

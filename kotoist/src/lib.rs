@@ -17,7 +17,7 @@ use nih_plug::prelude::*;
 
 use crate::editor::create_editor;
 use crate::orchestrator::{Event, EventValue};
-use crate::parameters::Parameters;
+use crate::parameters::{InterpreterMessage, Parameters};
 
 mod editor;
 mod interpreter;
@@ -71,23 +71,6 @@ impl Plugin for Kotoist {
         self.editor.take()
     }
 
-    // fn process_events(&mut self, events: &Events) {
-    //     for e in events.events() {
-    //         match e {
-    //             EventEnum::Midi(MidiEvent { data, .. }) => {
-    //                 if data[0] >= 0x90 || data[0] <= 0x9E && data[2] > 0 {
-    //                     self.parameters.eval_snippet_at(data[1] as usize);
-    //                     self.parameters.push_event(ParametersEvent {
-    //                         command: Command::NoteOn,
-    //                         value: format!("{}", data[1]),
-    //                     });
-    //                 }
-    //             }
-    //             _ => (),
-    //         }
-    //     }
-    // }
-
     fn process(
         &mut self,
         buffer: &mut Buffer<'_>,
@@ -95,8 +78,9 @@ impl Plugin for Kotoist {
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         if let Ok(mut orch) = self.params.orchestrator.try_lock() {
-            let transport = context.transport();
+            self.process_incoming_events(context, buffer.samples());
 
+            let transport = context.transport();
             orch.tick(transport.playing, &transport.into(), buffer.samples())
                 .into_iter()
                 .flat_map(|e| plugin_note_from_event(e, buffer.samples()))
@@ -104,6 +88,27 @@ impl Plugin for Kotoist {
         }
 
         ProcessStatus::KeepAlive
+    }
+}
+
+impl Kotoist {
+    fn process_incoming_events(&self, context: &mut impl ProcessContext<Self>, block_size: usize) {
+        let mut next_event = context.next_event();
+        for s in 0..block_size {
+            // don't context.next_event(), but trying to handle the same event until timing match
+            while let Some(event) = next_event {
+                if event.timing() != s as u32 {
+                    break;
+                }
+
+                if let NoteEvent::NoteOn { note, .. } = event {
+                    self.params
+                        .send_interpreter_msg(InterpreterMessage::EvalSnippet(note as usize));
+                }
+
+                next_event = context.next_event();
+            }
+        }
     }
 }
 
