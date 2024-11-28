@@ -124,6 +124,9 @@ impl Player {
     // get next quantazied position - i.e. the position at which the pattern should play taking the
     // quantization into account
     fn quantized_position(&self, transport: &Transport) -> f64 {
+        if self.quantization == 0.0 {
+            return transport.position;
+        }
         let quant_samples = self.quantization * transport.beat_length;
         let offset = quant_samples - (transport.position % quant_samples);
         transport.position + offset
