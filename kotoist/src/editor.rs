@@ -87,9 +87,22 @@ fn text_editor(
     params: &Arc<Parameters>,
 ) {
     ScrollArea::both().stick_to_bottom(true).show(ui, |ui| {
+        // this can happen at least on initialization
+        // we need to sync the state somehow
+        {
+            if let Ok(code) = params.snippets[params.selected_snippet_index()]
+                .code
+                .try_read()
+            {
+                if state.text_buffer != *code {
+                    state.text_buffer = code.to_owned();
+                }
+            }
+        }
+
         let output = CodeEditor::default()
             .id_source("code editor")
-            .with_rows(1)
+            .with_rows(29)
             .with_fontsize(13.0)
             .vscroll(false)
             .with_theme(ColorTheme::AYU_MIRAGE)
@@ -114,10 +127,7 @@ fn text_editor(
             })
             .unwrap_or_default();
 
-        if ui
-            .allocate_response(ui.available_size(), egui::Sense::click())
-            .clicked()
-        {
+        if ui.interact_bg(egui::Sense::click()).clicked() {
             output.response.request_focus();
         }
 
