@@ -99,10 +99,8 @@ impl Player {
         }
 
         if let Some(pattern) = self.requested.take() {
-            self.scheduled = Some(ScheduledPattern {
-                position: self.quantized_position(transport),
-                pattern,
-            });
+            let position = quantized_position(self.quantization, transport);
+            self.scheduled = Some(ScheduledPattern { position, pattern });
         }
 
         self.adjust_position(transport, block_size);
@@ -121,22 +119,11 @@ impl Player {
         result
     }
 
-    // get next quantazied position - i.e. the position at which the pattern should play taking the
-    // quantization into account
-    fn quantized_position(&self, transport: &Transport) -> f64 {
-        if self.quantization == 0.0 {
-            return transport.position;
-        }
-        let quant_samples = self.quantization * transport.beat_length;
-        let offset = quant_samples - (transport.position % quant_samples);
-        transport.position + offset
-    }
-
-    // adjust next note on position on cursor jump
+    // adjust next note-on position on cursor jump
     fn adjust_position(&mut self, transport: &Transport, block_size: usize) {
         // if the difference is more than block_size + a sample, we consider it a jump
         if (transport.position - self.last_position).abs() > (block_size + 1) as f64 {
-            self.next_note_on_pos = self.quantized_position(transport);
+            self.next_note_on_pos = quantized_position(self.quantization, transport);
             // call note off for all on the next sample
             self.note_offs
                 .iter_mut()
@@ -161,10 +148,28 @@ impl Player {
     /// try to queue pattern
     fn try_queue(&mut self, position: f64) {
         if let Some(stream) = self.scheduled.take() {
-            if position >= stream.position {
-                self.stream = Some(stream);
-            } else {
+            if position < stream.position {
                 self.scheduled = Some(stream);
+                return;
+            }
+
+            self.stream = Some(stream);
+
+            // the pattern should start playing immediately at the scheduled position. so we need to
+            // cut all the playing notes at this position.
+            self.next_note_on_pos = if self.next_note_on_pos > position {
+                position
+            } else {
+                self.next_note_on_pos
+            };
+
+            // also we need to cut note-offs
+            for note_off in self.note_offs.iter_mut() {
+                note_off.position = if note_off.position > position {
+                    position
+                } else {
+                    note_off.position
+                }
             }
         }
     }
@@ -217,6 +222,17 @@ impl Player {
     }
 }
 
+// get next quantazied position - i.e. the position at which the pattern should play taking the
+// quantization into account
+fn quantized_position(quantization: f64, transport: &Transport) -> f64 {
+    if quantization == 0.0 {
+        return transport.position;
+    }
+    let quant_samples = quantization * transport.beat_length;
+    let offset = quant_samples - (transport.position % quant_samples);
+    transport.position + offset
+}
+
 #[derive(Debug)]
 struct ScheduledPattern {
     position: f64,
@@ -225,6 +241,40 @@ struct ScheduledPattern {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Transport {
+    // in samples
     pub(crate) beat_length: f64,
+    // in samples
     pub(crate) position: f64,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_quantized_position() {
+        let sample_rate = 44100.0;
+        let bps = 60.0 / 120.0; // beats per second
+        let beat_length = bps * sample_rate;
+        let mut transport = Transport {
+            beat_length,
+            position: 1.0,
+        };
+
+        assert_eq!(quantized_position(1.0, &transport), beat_length);
+
+        for n in 0..100 {
+            transport.position = 42.0 * (n as f64 / 100.0) * sample_rate;
+            let quant = 1.5;
+            let quant_samples = quant * beat_length;
+            assert_eq!(quantized_position(quant, &transport) % quant_samples, 0.0);
+        }
+
+        transport.position = sample_rate;
+        let quant_samples = beat_length; // 1.0 s * beat_length
+        assert_eq!(
+            quantized_position(1.0, &transport),
+            sample_rate + quant_samples
+        );
+    }
 }
