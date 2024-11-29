@@ -51,7 +51,7 @@ impl Orchestrator {
 
 struct Player {
     pipe_in: PipeIn,
-    // 1. user called midi_out function and set the pattern with quantization
+    // 1. user called midiout function and set the pattern with quantization
     requested: Option<Pattern>,
     quantization: f64,
     // 2. the tick is called and the requested pattern scheduled

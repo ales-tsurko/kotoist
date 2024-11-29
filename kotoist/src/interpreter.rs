@@ -27,7 +27,7 @@ pub(crate) fn init_koto(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn)
     result.prelude().insert("random", make_random_module());
 
     result
-        .compile("from pattern import midi_out, print_scales")
+        .compile("from pattern import midiout, print_scales")
         .expect("import statement should compile");
     result
         .run()
@@ -49,7 +49,7 @@ fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) 
 
     let result = KMap::new();
 
-    result.add_fn("midi_out", move |ctx| match ctx.args() {
+    result.add_fn("midiout", move |ctx| match ctx.args() {
         [Map(map), Number(quant)] => {
             let quant = f64::from(quant);
 
@@ -79,7 +79,7 @@ fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) 
                     },
                     _ => {
                         return runtime_error!(
-                            "pattern.midi_out: \
+                            "pattern.midiout: \
                                 Expected arguments: map or list of maps, quantization."
                         )
                     }
@@ -91,7 +91,7 @@ fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) 
             Ok(Null)
         }
         _ => runtime_error!(
-            "pattern.midi_out: \
+            "pattern.midiout: \
                 Expected arguments: map or list of maps, quantization."
         ),
     });

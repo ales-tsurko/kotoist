@@ -45,7 +45,7 @@ The latest ran snippet is indicated by green color.
 
 ### Writing Scripts
 
-The main function, which connects your DAW with **koto** is `midi_out`. The
+The main function, which connects your DAW with **koto** is `midiout`. The
 arguments are:
 
 - a pattern or an array of patterns to play

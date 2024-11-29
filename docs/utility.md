@@ -8,12 +8,12 @@ Utility API
 
 
 
-## midi_out
+## midiout
 
 Plays the pattern.
 
 ```coffee
-midi_out {}, 4
+midiout {}, 4
 ```
 | Argument     | Description                                   | Default |
 | --------     | -----------                                   | ------- |
