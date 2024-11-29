@@ -4,15 +4,14 @@ use std::sync::{
 };
 use std::thread;
 
-use koto::prelude::*;
 use nih_plug::prelude::*;
 use nih_plug_egui::EguiState;
 use serde::{Deserialize, Serialize};
 
 use crate::editor::WINDOW_SIZE;
-use crate::interpreter;
+use crate::interpreter::Interpreter;
 use crate::orchestrator::Orchestrator;
-use crate::pipe::{Message as PipeMessage, PipeIn};
+use crate::pipe::PipeIn;
 
 #[derive(Params)]
 pub(crate) struct Parameters {
@@ -54,34 +53,21 @@ impl Parameters {
     ) -> mpsc::Sender<InterpreterMessage> {
         let (interpreter_sender, interpreter_receiver) = mpsc::channel();
 
-        fn eval_code(koto: &mut Koto, pipe_in: &PipeIn, code: &str) {
-            match koto.compile_and_run(code) {
-                Ok(v) => {
-                    if !matches!(v, KValue::Null) {
-                        pipe_in.send(PipeMessage::Normal(
-                            koto.value_to_string(v).unwrap_or_default(),
-                        ));
-                    }
-                }
-                Err(err) => pipe_in.send(PipeMessage::Error(format!("Error: {}", err))),
-            }
-        }
-
         thread::spawn(move || {
-            let mut koto = interpreter::init_koto(orchestrator, pipe_in.clone());
+            let mut interp = Interpreter::new(orchestrator, pipe_in.clone());
             loop {
                 if let Ok(message) = interpreter_receiver.recv() {
                     match message {
                         InterpreterMessage::EvalSnippet(index) => {
                             let code = snippets[index].code.read().unwrap();
-                            eval_code(&mut koto, &pipe_in, &code);
+                            interp.eval_code(&code);
                         }
 
                         InterpreterMessage::SetSnippet(index, code) => {
                             *snippets[index].code.write().unwrap() = code;
                         }
 
-                        InterpreterMessage::EvalCode(code) => eval_code(&mut koto, &pipe_in, &code),
+                        InterpreterMessage::EvalCode(code) => interp.eval_code(&code),
                     }
                 }
             }

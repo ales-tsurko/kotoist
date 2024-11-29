@@ -5,46 +5,66 @@ use koto::prelude::*;
 use koto_random::make_module as make_random_module;
 
 use crate::orchestrator::{Orchestrator, Pattern, Scale};
-use crate::pipe::{Message, PipeIn};
+use crate::pipe::{Message as PipeMessage, PipeIn};
 
 const KOTO_LIB_CODE: &str = include_str!("../koto/pattern.koto");
 
-pub(crate) fn init_koto(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) -> Koto {
-    let mut result = Koto::with_settings(
-        KotoSettings {
-            run_tests: cfg!(debug_assertions),
-            export_top_level_ids: true,
-            ..Default::default()
-        }
-        .with_stdin(StdIn)
-        .with_stdout(StdOut::from(&pipe_in))
-        .with_stderr(StdErr::from(&pipe_in)),
-    );
-
-    result
-        .prelude()
-        .insert("pattern", make_pattern_module(orchestrator, pipe_in));
-    result.prelude().insert("random", make_random_module());
-
-    result
-        .compile("from pattern import midiout, print_scales")
-        .expect("import statement should compile");
-    result
-        .run()
-        .expect("importing pattern module should not fail");
-
-    result
-        .compile(KOTO_LIB_CODE)
-        .expect("core pattern lib should compile");
-    if let Err(e) = result.run() {
-        eprintln!("{}", e);
-        panic!("evaluating the koto pattern library should not fail");
-    }
-
-    result
+pub(crate) struct Interpreter {
+    koto: Koto,
+    pipe_in: PipeIn,
 }
 
-fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) -> KMap {
+impl Interpreter {
+    pub(crate) fn new(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) -> Self {
+        let mut koto = Koto::with_settings(
+            KotoSettings {
+                run_tests: cfg!(debug_assertions),
+                export_top_level_ids: true,
+                ..Default::default()
+            }
+            .with_stdin(StdIn)
+            .with_stdout(StdOut::from(&pipe_in))
+            .with_stderr(StdErr::from(&pipe_in)),
+        );
+
+        koto.prelude().insert(
+            "kotoist",
+            make_kotoist_module(orchestrator, pipe_in.clone()),
+        );
+        koto.prelude().insert("random", make_random_module());
+
+        koto.compile("from kotoist import midiout, print_scales")
+            .expect("import statement should compile");
+        koto.run()
+            .expect("importing pattern module should not fail");
+
+        koto.compile(KOTO_LIB_CODE)
+            .expect("core pattern lib should compile");
+        if let Err(e) = koto.run() {
+            eprintln!("{}", e);
+            panic!("evaluating the koto pattern library should not fail");
+        }
+
+        Self { koto, pipe_in }
+    }
+
+    pub(crate) fn eval_code(&mut self, code: &str) {
+        match self.koto.compile_and_run(code) {
+            Ok(v) => {
+                if !matches!(v, KValue::Null) {
+                    self.pipe_in.send(PipeMessage::Normal(
+                        self.koto.value_to_string(v).unwrap_or_default(),
+                    ));
+                }
+            }
+            Err(err) => self
+                .pipe_in
+                .send(PipeMessage::Error(format!("Error: {}", err))),
+        }
+    }
+}
+
+fn make_kotoist_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) -> KMap {
     use KValue::{List, Map, Null, Number};
 
     let result = KMap::new();
@@ -79,7 +99,7 @@ fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) 
                     },
                     _ => {
                         return runtime_error!(
-                            "pattern.midiout: \
+                            "kotoist.midiout: \
                                 Expected arguments: map or list of maps, quantization."
                         )
                     }
@@ -91,17 +111,17 @@ fn make_pattern_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) 
             Ok(Null)
         }
         _ => runtime_error!(
-            "pattern.midiout: \
+            "kotoist.midiout: \
                 Expected arguments: map or list of maps, quantization."
         ),
     });
 
     result.add_fn("print_scales", move |ctx| match ctx.args() {
         [] => {
-            pipe_in.send(Message::Normal(Scale::list()));
+            pipe_in.send(PipeMessage::Normal(Scale::list()));
             Ok(Null)
         }
-        _ => runtime_error!("pattern.print_scales: doesn't expect any arguments"),
+        _ => runtime_error!("kotoist.print_scales: doesn't expect any arguments"),
     });
 
     result
@@ -160,5 +180,5 @@ macro_rules! impl_channel {
     };
 }
 
-impl_channel!(StdOut, Message::Normal, "koto-stdout");
-impl_channel!(StdErr, Message::Error, "koto-stderr");
+impl_channel!(StdOut, PipeMessage::Normal, "koto-stdout");
+impl_channel!(StdErr, PipeMessage::Error, "koto-stderr");
