@@ -1,17 +1,18 @@
-use std::convert::TryFrom;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use koto::prelude::*;
 use koto_random::make_module as make_random_module;
 
-use crate::orchestrator::{Orchestrator, Pattern, Scale};
+use super::kotoist_module::{self, Callbacks};
+use crate::orchestrator::Orchestrator;
 use crate::pipe::{Message as PipeMessage, PipeIn};
 
-const KOTO_LIB_CODE: &str = include_str!("../koto/pattern.koto");
+const KOTO_LIB_CODE: &str = include_str!("../../koto/pattern.koto");
 
 pub(crate) struct Interpreter {
     koto: Koto,
     pipe_in: PipeIn,
+    callbacks: Arc<Mutex<Callbacks>>,
 }
 
 impl Interpreter {
@@ -26,14 +27,16 @@ impl Interpreter {
             .with_stdout(StdOut::from(&pipe_in))
             .with_stderr(StdErr::from(&pipe_in)),
         );
+        let callbacks = Arc::new(Mutex::new(Callbacks::default()));
 
         koto.prelude().insert(
             "kotoist",
-            make_kotoist_module(orchestrator, pipe_in.clone()),
+            kotoist_module::make_module(orchestrator, callbacks.clone(), pipe_in.clone()),
         );
         koto.prelude().insert("random", make_random_module());
 
-        koto.compile("from kotoist import midiout, print_scales")
+        koto.compile("from kotoist import midiout, on_load, on_midiin, \
+            on_midiincc, on_play, on_pause, print_scales")
             .expect("import statement should compile");
         koto.run()
             .expect("importing pattern module should not fail");
@@ -45,11 +48,60 @@ impl Interpreter {
             panic!("evaluating the koto pattern library should not fail");
         }
 
-        Self { koto, pipe_in }
+        Self {
+            koto,
+            callbacks,
+            pipe_in,
+        }
     }
 
     pub(crate) fn eval_code(&mut self, code: &str) {
-        match self.koto.compile_and_run(code) {
+        let result = self.koto.compile_and_run(code);
+        self.handle_koto_result(result);
+    }
+
+    /// Dispatch `on_load` callback.
+    pub(crate) fn on_load(&mut self) {
+        self.dispatch_callback(&[], |cbs| cbs.load.clone())
+    }
+
+    /// Dispatch `on_midiin` callback.
+    pub(crate) fn on_midiin(&mut self, nn: u8, vel: f32, ch: u8) {
+        self.dispatch_callback(&[nn.into(), vel.into(), ch.into()], |cbs| {
+            cbs.midiin.clone()
+        })
+    }
+
+    /// Dispatch `on_midiincc` callback.
+    pub(crate) fn on_midiincc(&mut self, cc: u8, vel: f32, ch: u8) {
+        self.dispatch_callback(&[cc.into(), vel.into(), ch.into()], |cbs| {
+            cbs.midiin.clone()
+        })
+    }
+
+    /// Dispatch `on_pause` callback.
+    pub(crate) fn on_pause(&mut self) {
+        self.dispatch_callback(&[], |cbs| cbs.pause.clone())
+    }
+
+    /// Dispatch `on_play` callback.
+    pub(crate) fn on_play(&mut self) {
+        self.dispatch_callback(&[], |cbs| cbs.play.clone())
+    }
+
+    fn dispatch_callback<'a>(
+        &mut self,
+        args: impl Into<CallArgs<'a>>,
+        map: impl FnOnce(MutexGuard<Callbacks>) -> Option<KValue>,
+    ) {
+        if let Some(cb) = self.callbacks.try_lock().ok().and_then(map) {
+            let result = self.koto.call_function(cb, args);
+            self.handle_koto_result(result);
+        }
+    }
+
+    fn handle_koto_result(&mut self, result: Result<KValue, koto::Error>) {
+        match result {
             Ok(v) => {
                 if !matches!(v, KValue::Null) {
                     self.pipe_in.send(PipeMessage::Normal(
@@ -62,69 +114,6 @@ impl Interpreter {
                 .send(PipeMessage::Error(format!("Error: {}", err))),
         }
     }
-}
-
-fn make_kotoist_module(orchestrator: Arc<Mutex<Orchestrator>>, pipe_in: PipeIn) -> KMap {
-    use KValue::{List, Map, Null, Number};
-
-    let result = KMap::new();
-
-    result.add_fn("midiout", move |ctx| match ctx.args() {
-        [Map(map), Number(quant)] => {
-            let quant = f64::from(quant);
-
-            match Pattern::try_from(map) {
-                Ok(pattern) => {
-                    orchestrator
-                        .lock()
-                        .unwrap()
-                        .set_patterns(vec![pattern], quant);
-                }
-                Err(e) => return runtime_error!("{}", e),
-            }
-
-            Ok(Null)
-        }
-        [List(list), Number(quant)] => {
-            let quant = f64::from(quant);
-            let mut patterns = Vec::new();
-
-            for item in list.clone().data().iter() {
-                match item {
-                    Map(map) => match Pattern::try_from(map) {
-                        Ok(pattern) => {
-                            patterns.push(pattern);
-                        }
-                        Err(e) => return runtime_error!("{}", e),
-                    },
-                    _ => {
-                        return runtime_error!(
-                            "kotoist.midiout: \
-                                Expected arguments: map or list of maps, quantization."
-                        )
-                    }
-                }
-            }
-
-            orchestrator.lock().unwrap().set_patterns(patterns, quant);
-
-            Ok(Null)
-        }
-        _ => runtime_error!(
-            "kotoist.midiout: \
-                Expected arguments: map or list of maps, quantization."
-        ),
-    });
-
-    result.add_fn("print_scales", move |ctx| match ctx.args() {
-        [] => {
-            pipe_in.send(PipeMessage::Normal(Scale::list()));
-            Ok(Null)
-        }
-        _ => runtime_error!("kotoist.print_scales: doesn't expect any arguments"),
-    });
-
-    result
 }
 
 struct StdIn;

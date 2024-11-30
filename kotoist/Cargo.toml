@@ -4,6 +4,9 @@ version = "0.2.0"
 authors = { workspace = true }
 edition = { workspace = true }
 
+[lints.clippy]
+module-inception = "allow"
+
 [dependencies]
 egui_code_editor = { git = "https://github.com/ales-tsurko/egui_code_editor.git", rev = "8539ebfb36c42d3873f1fe90fe7949462c8acf21" }
 koto = "0.14.1"

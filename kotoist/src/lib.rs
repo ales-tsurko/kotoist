@@ -60,6 +60,16 @@ impl Plugin for Kotoist {
     type BackgroundTask = ();
     type SysExMessage = ();
 
+    fn initialize(
+        &mut self,
+        _audio_io_layout: &AudioIOLayout,
+        _buffer_config: &BufferConfig,
+        _context: &mut impl InitContext<Self>,
+    ) -> bool {
+        self.params.send_interpreter_msg(InterpreterMessage::OnLoad);
+        true
+    }
+
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
     }
@@ -81,6 +91,14 @@ impl Plugin for Kotoist {
             self.process_incoming_events(context, buffer.samples());
 
             let transport = context.transport();
+
+            if transport.playing {
+                self.params.send_interpreter_msg(InterpreterMessage::OnPlay);
+            } else {
+                self.params
+                    .send_interpreter_msg(InterpreterMessage::OnPause);
+            }
+
             orch.tick(transport.playing, &transport.into(), buffer.samples())
                 .into_iter()
                 .flat_map(|e| plugin_note_from_event(e, buffer.samples()))
@@ -101,9 +119,38 @@ impl Kotoist {
                     break;
                 }
 
-                if let NoteEvent::NoteOn { note, .. } = event {
-                    self.params
-                        .send_interpreter_msg(InterpreterMessage::EvalSnippet(note as usize));
+                match event {
+                    NoteEvent::NoteOn {
+                        channel,
+                        note,
+                        velocity,
+                        ..
+                    }
+                    | NoteEvent::NoteOff {
+                        channel,
+                        note,
+                        velocity,
+                        ..
+                    } => {
+                        let velocity = if matches!(event, NoteEvent::NoteOff { .. }) {
+                            0.0
+                        } else {
+                            velocity
+                        };
+                        self.params
+                            .send_interpreter_msg(InterpreterMessage::OnMidiIn(
+                                note, velocity, channel,
+                            ));
+                    }
+                    NoteEvent::MidiCC {
+                        channel, cc, value, ..
+                    } => {
+                        self.params
+                            .send_interpreter_msg(InterpreterMessage::OnMidiInCc(
+                                cc, value, channel,
+                            ));
+                    }
+                    _ => (),
                 }
 
                 next_event = context.next_event();

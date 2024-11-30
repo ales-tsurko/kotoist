@@ -55,6 +55,7 @@ impl Parameters {
 
         thread::spawn(move || {
             let mut interp = Interpreter::new(orchestrator, pipe_in.clone());
+            let mut is_playing = false;
             loop {
                 if let Ok(message) = interpreter_receiver.recv() {
                     match message {
@@ -68,6 +69,28 @@ impl Parameters {
                         }
 
                         InterpreterMessage::EvalCode(code) => interp.eval_code(&code),
+
+                        InterpreterMessage::OnLoad => interp.on_load(),
+
+                        InterpreterMessage::OnMidiIn(nn, vel, ch) => interp.on_midiin(nn, vel, ch),
+
+                        InterpreterMessage::OnMidiInCc(cc, vel, ch) => {
+                            interp.on_midiincc(cc, vel, ch)
+                        }
+
+                        InterpreterMessage::OnPause => {
+                            if is_playing {
+                                is_playing = false;
+                                interp.on_pause();
+                            }
+                        }
+
+                        InterpreterMessage::OnPlay => {
+                            if !is_playing {
+                                is_playing = true;
+                                interp.on_play();
+                            }
+                        }
                     }
                 }
             }
@@ -96,6 +119,11 @@ pub(crate) enum InterpreterMessage {
     EvalSnippet(usize),
     SetSnippet(usize, String),
     EvalCode(String),
+    OnLoad,
+    OnMidiIn(u8, f32, u8),
+    OnMidiInCc(u8, f32, u8),
+    OnPause,
+    OnPlay,
 }
 
 // note number to piano key
