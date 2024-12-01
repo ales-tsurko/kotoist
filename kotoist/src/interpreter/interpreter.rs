@@ -35,9 +35,11 @@ impl Interpreter {
         );
         koto.prelude().insert("random", make_random_module());
 
-        koto.compile("from kotoist import midiout, on_load, on_midiin, \
-            on_midiincc, on_play, on_pause, print_scales")
-            .expect("import statement should compile");
+        koto.compile(
+            "from kotoist import midiout, on_load, on_midiin, \
+            on_midiincc, on_play, on_pause, print_scales",
+        )
+        .expect("import statement should compile");
         koto.run()
             .expect("importing pattern module should not fail");
 
