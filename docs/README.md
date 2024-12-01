@@ -5,12 +5,10 @@ Kotoist
 [live coding](https://en.wikipedia.org/wiki/Live_coding) and 
 [algorithmic composition](https://en.wikipedia.org/wiki/Algorithmic_composition).
 It allows you to compose music on-the-fly using
-[Koto](https://github.com/koto-lang/koto) programming language and the library
+[Koto](https://github.com/koto-lang/koto) programming language and a library
 of patterns.
 
 You can download it [here](https://github.com/ales-tsurko/kotoist/releases).
-There are binaries for macOS. Windows is supported, but you need to build it
-from source at the moment.
 
 The source code is available at
 [GitHub](https://github.com/ales-tsurko/kotoist).
@@ -20,27 +18,10 @@ The source code is available at
 
 ## Usage
 
-Write your script in the editor. Then evaluate the code using **"Build"** (the
-hammer) button.
+Write your script in the editor. Then evaluate the code using **"Run"** button
+or `Cmd-Enter` on macOS or `Ctrl-Enter` or other systems. Also, you can evaluate
+a part of the code by selecting it and pressing `Cmd-`\`Ctrl-Enter`.
 
-You can also evaluate only the part of the code by selecting the code you want
-to evaluate and pressing the **Build** button.
-
-![screenshot 1](/screenshots/editor.png "Kotoist editor")
-
-To open snippets chooser view, press **"Snippets"** (the table) button.
-
-![screenshot 2](/screenshots/snippets.png "Kotoist snippets")
-
-You can have a code snippet per each MIDI note.
-
-To choose another snippet, click on the snippet label. The currently chosen
-snippet is indicated by yellow color.
-
-To run the snippet, you can either play a corresponding note, click on a pad in
-the **"Snippets"** view or evaluate the code using **"Build"** button.
-
-The latest ran snippet is indicated by green color.
 
 
 ### Writing Scripts
@@ -48,7 +29,7 @@ The latest ran snippet is indicated by green color.
 The main function, which connects your DAW with **koto** is `midiout`. The
 arguments are:
 
-- a pattern or an array of patterns to play
+- a pattern or a list of patterns to play
 - the quantization in beats.
 
 The **pattern** is a map with optional values:

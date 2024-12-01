@@ -37,6 +37,85 @@ The **pattern** is a map with optional values:
 
 
 
+## on_load
+
+Executes a callback function when plugin initialized.
+
+```coffee
+on_load ||
+    print "plugin loaded"
+```
+| Argument     | Description                                   | Default |
+| --------     | -----------                                   | ------- |
+| callback      | A function, which will be called, when plugin initialized.    |         |
+
+
+
+
+## on_midiin
+
+Executes a callback function when host sends MIDI note-on/off events.
+
+```coffee
+on_midiin |note, velocity, channel|
+    if velocity == 0
+        print "note off: ", note
+    else
+        print "note on: ", note
+```
+| Argument     | Description                                                                                                                    | Default |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| callback      | A function, receiving `note_number` (integer `[0, 127]`), `velocity` (float `[0.0, 1.0]`) and `channel` (integer `[0, 127]`). |         |
+
+
+
+
+
+## on_midiincc
+
+Executes a callback function when host sends MIDI control change message.
+
+```coffee
+on_midiincc |cc, value, channel|
+    print "control: ", cc, ", value: ", value
+```
+| Argument     | Description                                                                                                                       | Default |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| callback      | A function, receiving `control_number` (integer `[0, 127]`), `value` (float `[0.0, 1.0]`) and `channel` (integer `[0, 127]`).    |         |
+
+
+
+
+## on_play
+
+Executes a callback function when playback is started.
+
+```coffee
+on_play ||
+    print "playing"
+```
+| Argument | Description                                                     | Default |
+| -------- | --------------------------------------------------------------- | ------- |
+| callback | A function, which will be called, when playback is started.     |         |
+
+
+
+
+## on_pause
+
+Executes a callback function when playback is paused.
+
+```coffee
+on_pause ||
+    print "paused"
+```
+| Argument | Description                                                     | Default |
+| -------- | --------------------------------------------------------------- | ------- |
+| callback | A function, which will be called, when playback is paused.      |         |
+
+
+
+
 ## print_scales
 
 Prints all available scales to the console.
