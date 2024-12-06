@@ -21,19 +21,18 @@ pub(crate) struct Parameters {
     pub(crate) editor_state: Arc<EguiState>,
     #[persist = "selected-snippet"]
     pub(crate) selected_snippet: AtomicUsize,
-    #[nested(array)]
-    pub(crate) snippets: Arc<Vec<Snippet>>,
+    #[persist = "snippets"]
+    pub(crate) snippets: Arc<RwLock<Vec<Snippet>>>,
 }
 
 impl Parameters {
     pub(crate) fn new(pipe_in: PipeIn) -> Self {
         let orchestrator = Arc::new(Mutex::new(Orchestrator::new(pipe_in.clone())));
-        let snippets: Arc<Vec<Snippet>> = Arc::new(
-            (0..=127)
-                .map(nn_to_pk)
-                .map(Snippet::with_piano_key)
-                .collect(),
-        );
+        // there always should be at least one snippet
+        let snippets = Arc::new(RwLock::new(vec![Snippet {
+            code: String::new(),
+            name: "Snippet 1".to_owned(),
+        }]));
         let interpreter_sender =
             Self::spawn_interpreter_worker(orchestrator.clone(), snippets.clone(), pipe_in);
 
@@ -48,7 +47,7 @@ impl Parameters {
 
     fn spawn_interpreter_worker(
         orchestrator: Arc<Mutex<Orchestrator>>,
-        snippets: Arc<Vec<Snippet>>,
+        snippets: Arc<RwLock<Vec<Snippet>>>,
         pipe_in: PipeIn,
     ) -> mpsc::Sender<InterpreterMessage> {
         let (interpreter_sender, interpreter_receiver) = mpsc::channel();
@@ -59,13 +58,10 @@ impl Parameters {
             loop {
                 if let Ok(message) = interpreter_receiver.recv() {
                     match message {
-                        InterpreterMessage::EvalSnippet(index) => {
-                            let code = snippets[index].code.read().unwrap();
-                            interp.eval_code(&code);
-                        }
-
-                        InterpreterMessage::SetSnippet(index, code) => {
-                            *snippets[index].code.write().unwrap() = code;
+                        InterpreterMessage::SetSnippetCode(index, code) => {
+                            if let Some(snippet) = snippets.write().unwrap().get_mut(index) {
+                                snippet.code = code;
+                            }
                         }
 
                         InterpreterMessage::EvalCode(code) => interp.eval_code(&code),
@@ -89,6 +85,22 @@ impl Parameters {
                             if !is_playing {
                                 is_playing = true;
                                 interp.on_play();
+                            }
+                        }
+
+                        InterpreterMessage::AddSnippet => {
+                            let mut snippets = snippets.write().unwrap();
+                            let name = format!("Snippet {}", snippets.len() + 1);
+                            snippets.push(Snippet {
+                                name,
+                                code: String::new(),
+                            });
+                        }
+
+                        InterpreterMessage::RemoveSnippet(id) => {
+                            let mut snippets = snippets.write().unwrap();
+                            if snippets.len() > 1 {
+                                snippets.swap_remove(id);
                             }
                         }
                     }
@@ -116,14 +128,28 @@ impl Parameters {
 
 #[derive(Debug, Clone)]
 pub(crate) enum InterpreterMessage {
-    EvalSnippet(usize),
-    SetSnippet(usize, String),
+    // EvalSnippet(Uuid),
+    SetSnippetCode(usize, String),
     EvalCode(String),
     OnLoad,
     OnMidiIn(u8, f32, u8),
     OnMidiInCc(u8, f32, u8),
     OnPause,
     OnPlay,
+    AddSnippet,
+    RemoveSnippet(usize),
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub(crate) struct Snippet {
+    pub(crate) code: String,
+    pub(crate) name: String,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub(crate) struct PianoKey {
+    pub(crate) name: String,
+    pub(crate) is_black: bool,
 }
 
 // note number to piano key
@@ -139,29 +165,6 @@ fn nn_to_pk(nn: usize) -> PianoKey {
         is_black: name.contains('#'),
         name,
     }
-}
-
-#[derive(Debug, Params, Default, Deserialize, Serialize)]
-pub(crate) struct Snippet {
-    #[persist = "code"]
-    pub(crate) code: RwLock<String>,
-    #[persist = "piano_key"]
-    pub(crate) piano_key: RwLock<PianoKey>,
-}
-
-impl Snippet {
-    fn with_piano_key(piano_key: PianoKey) -> Self {
-        Self {
-            piano_key: RwLock::new(piano_key),
-            ..Default::default()
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub(crate) struct PianoKey {
-    pub(crate) name: String,
-    pub(crate) is_black: bool,
 }
 
 #[cfg(test)]

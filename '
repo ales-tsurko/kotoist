@@ -7,10 +7,10 @@ use nih_plug_egui::{
     egui::{self, containers::ScrollArea},
 };
 
-use crate::parameters::{InterpreterMessage, Parameters, Snippet};
+use crate::parameters::{InterpreterMessage, Parameters};
 use crate::pipe::{Message as PipeMessage, PipeOut};
 
-pub(crate) const WINDOW_SIZE: (u32, u32) = (700, 732);
+pub(crate) const WINDOW_SIZE: (u32, u32) = (650, 700);
 
 pub(crate) fn create_editor(
     params: Arc<Parameters>,
@@ -21,22 +21,21 @@ pub(crate) fn create_editor(
         GuiState::default(),
         |_, _| {},
         move |egui_ctx, _setter, state| {
-            egui::TopBottomPanel::top("tabbar")
-                .show_separator_line(false)
-                .exact_height(32.0)
+            egui::TopBottomPanel::top("pad-selector")
+                .exact_height(20.0)
+                .show_inside(ui)
                 .show(egui_ctx, |ui| {
-                    tab_bar(ui, params.clone());
+                    tab_bar(ui, state, params.clone());
                 });
 
             egui::TopBottomPanel::bottom("console")
                 .exact_height(200.0)
-                .show_separator_line(false)
                 .show(egui_ctx, |ui| bottom_panel(ui, state, &params, &pipe_out));
 
             // per egui docs the CentralPanel should always go last
             let bg = egui::Visuals::default().faint_bg_color;
             egui::CentralPanel::default()
-                .frame(egui::Frame::default().inner_margin(7.0).fill(bg))
+                .frame(egui::Frame::default().fill(bg))
                 .show(egui_ctx, |ui| {
                     text_editor(egui_ctx, ui, state, &params);
                 });
@@ -44,50 +43,32 @@ pub(crate) fn create_editor(
     )
 }
 
-fn tab_bar(ui: &mut egui::Ui, params: Arc<Parameters>) {
+fn tab_bar(ui: &mut egui::Ui, state: &mut GuiState, params: Arc<Parameters>) {
     ScrollArea::horizontal().show(ui, |ui| {
-        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-            let selected_snippet = params.selected_snippet_index();
-            if let Ok(snippets) = params.snippets.try_read() {
-                for (index, snippet) in snippets.iter().enumerate() {
-                    let fallback_index = index
-                        .min(snippets.len().saturating_sub(2))
-                        .min(selected_snippet);
-                    show_tab(
-                        ui,
-                        snippet,
-                        index,
-                        fallback_index,
-                        index == selected_snippet,
-                        params.clone(),
-                    );
-                }
-            }
-
-            if ui.button("+").clicked() {
-                params.send_interpreter_msg(InterpreterMessage::AddSnippet);
-            }
-        });
-    });
-}
-
-fn show_tab(
-    ui: &mut egui::Ui,
-    snippet: &Snippet,
-    index: usize,
-    fallback_index: usize,
-    selected: bool,
-    params: Arc<Parameters>,
-) {
-    ui.horizontal(|ui| {
-        if ui.selectable_label(selected, &snippet.name).clicked() {
-            params.set_selected_snippet_index(index);
-        }
-
-        if ui.selectable_label(false, "x").clicked() {
-            params.send_interpreter_msg(InterpreterMessage::RemoveSnippet(index));
-            params.set_selected_snippet_index(fallback_index);
-        }
+        // TODO
+        // for (index, snippet) in params.snippets.iter().enumerate().rev() {
+        //     if let (Ok(code), Ok(piano_key)) =
+        //         (snippet.code.try_read(), snippet.piano_key.try_read())
+        //     {
+        //         let color = if !code.is_empty() {
+        //             egui::Color32::LIGHT_RED
+        //         } else if piano_key.is_black {
+        //             egui::Color32::BLACK
+        //         } else {
+        //             egui::Color32::WHITE
+        //         };
+        //         if ui
+        //             .add_sized(
+        //                 [ui.available_width(), 10.0],
+        //                 egui::Button::new(&piano_key.name).fill(color),
+        //             )
+        //             .clicked()
+        //         {
+        //             params.set_selected_snippet_index(index);
+        //             state.text_buffer = code.clone();
+        //         }
+        //     }
+        // }
     });
 }
 
@@ -117,7 +98,7 @@ fn text_editor(
 
         let output = CodeEditor::default()
             .id_source("code editor")
-            .with_rows(32)
+            .with_rows(31)
             .with_fontsize(13.0)
             .vscroll(false)
             .with_theme(ColorTheme::AYU_MIRAGE)
@@ -127,7 +108,7 @@ fn text_editor(
 
         if output.response.changed() {
             let index = params.selected_snippet_index();
-            params.send_interpreter_msg(InterpreterMessage::SetSnippetCode(
+            params.send_interpreter_msg(InterpreterMessage::SetSnippet(
                 index,
                 state.text_buffer.clone(),
             ));
@@ -173,7 +154,7 @@ fn bottom_panel(
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.add_space(6.0);
-            ui.label("Console");
+            ui.label("Console output");
             ui.add_space(6.0);
         });
         ui.add_space(ui.available_width() - 50.0);
