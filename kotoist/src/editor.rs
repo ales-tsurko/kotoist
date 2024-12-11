@@ -23,7 +23,7 @@ pub(crate) fn create_editor(
         move |egui_ctx, _setter, state| {
             egui::TopBottomPanel::top("tabbar")
                 .show_separator_line(false)
-                .exact_height(32.0)
+                .exact_height(42.0)
                 .show(egui_ctx, |ui| {
                     tab_bar(ui, params.clone());
                 });
@@ -79,16 +79,17 @@ fn show_tab(
     selected: bool,
     params: Arc<Parameters>,
 ) {
-    ui.horizontal(|ui| {
-        if ui.selectable_label(selected, &snippet.name).clicked() {
-            params.set_selected_snippet_index(index);
-        }
+    if ui
+        .selectable_label(selected, egui::RichText::new(&snippet.name).size(22.0))
+        .clicked()
+    {
+        params.set_selected_snippet_index(index);
+    }
 
-        if ui.selectable_label(false, "x").clicked() {
-            params.send_interpreter_msg(InterpreterMessage::RemoveSnippet(index));
-            params.set_selected_snippet_index(fallback_index);
-        }
-    });
+    if ui.selectable_label(false, "x").clicked() {
+        params.send_interpreter_msg(InterpreterMessage::RemoveSnippet(index));
+        params.set_selected_snippet_index(fallback_index);
+    }
 }
 
 fn text_editor(
@@ -117,7 +118,7 @@ fn text_editor(
 
         let output = CodeEditor::default()
             .id_source("code editor")
-            .with_rows(32)
+            .with_rows(30)
             .with_fontsize(13.0)
             .vscroll(false)
             .with_theme(ColorTheme::AYU_MIRAGE)

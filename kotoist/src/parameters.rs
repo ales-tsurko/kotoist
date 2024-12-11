@@ -29,10 +29,7 @@ impl Parameters {
     pub(crate) fn new(pipe_in: PipeIn) -> Self {
         let orchestrator = Arc::new(Mutex::new(Orchestrator::new(pipe_in.clone())));
         // there always should be at least one snippet
-        let snippets = Arc::new(RwLock::new(vec![Snippet {
-            code: String::new(),
-            name: "Snippet 1".to_owned(),
-        }]));
+        let snippets = Arc::new(RwLock::new(vec![Snippet::with_random_name()]));
         let interpreter_sender =
             Self::spawn_interpreter_worker(orchestrator.clone(), snippets.clone(), pipe_in);
 
@@ -90,11 +87,7 @@ impl Parameters {
 
                         InterpreterMessage::AddSnippet => {
                             let mut snippets = snippets.write().unwrap();
-                            let name = format!("Snippet {}", snippets.len() + 1);
-                            snippets.push(Snippet {
-                                name,
-                                code: String::new(),
-                            });
+                            snippets.push(Snippet::with_random_name());
                         }
 
                         InterpreterMessage::RemoveSnippet(id) => {
@@ -144,6 +137,23 @@ pub(crate) enum InterpreterMessage {
 pub(crate) struct Snippet {
     pub(crate) code: String,
     pub(crate) name: String,
+}
+
+const NAME_SYMBOLS: [&str; 28] = [
+    "☃", "☄", "☠", "⚓", "🌊", "🌋", "🍄", "🍐", "🍭", "🎃", "🎩", "🐲", "👁", "👂", "👓", "👹",
+    "👺", "👻", "👽", "👾", "👿", "💀", "🕷", "😀", "😇", "😈", "😱", "😶",
+];
+
+impl Snippet {
+    pub(crate) fn with_random_name() -> Self {
+        let name = fastrand::choose_multiple(NAME_SYMBOLS, 4)
+            .into_iter()
+            .collect::<String>();
+        Self {
+            name,
+            code: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
