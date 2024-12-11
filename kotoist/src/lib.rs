@@ -49,12 +49,11 @@ impl Plugin for Kotoist {
     const URL: &'static str = "https://kotoist.alestsurko.by";
     const EMAIL: &'static str = "ales.tsurko@gmail.com";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    // const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
-    //     main_input_channels: NonZeroU32::new(NUM_CHANNELS),
-    //     main_output_channels: NonZeroU32::new(NUM_CHANNELS),
-    //     ..AudioIOLayout::const_default()
-    // }];
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
+        main_input_channels: NonZeroU32::new(NUM_CHANNELS),
+        main_output_channels: NonZeroU32::new(NUM_CHANNELS),
+        ..AudioIOLayout::const_default()
+    }];
     const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::MidiCCs;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
