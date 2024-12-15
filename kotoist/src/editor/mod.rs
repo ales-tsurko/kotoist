@@ -7,15 +7,19 @@ use nih_plug_egui::{
     egui::{self, containers::ScrollArea},
 };
 
+use self::piano_roll::PianoRoll;
 use crate::parameters::{InterpreterMessage, Parameters, Snippet};
 use crate::pipe::{Message as PipeMessage, PipeOut};
 
-pub(crate) const WINDOW_SIZE: (u32, u32) = (700, 732);
+mod piano_roll;
+
+pub(crate) const WINDOW_SIZE: (u32, u32) = (700, 734);
 
 pub(crate) fn create_editor(
     params: Arc<Parameters>,
     pipe_out: Arc<Mutex<PipeOut>>,
 ) -> Option<Box<dyn Editor>> {
+    let piano_roll = PianoRoll::default();
     create_egui_editor(
         params.editor_state.clone(),
         GuiState::default(),
@@ -38,7 +42,15 @@ pub(crate) fn create_editor(
             egui::CentralPanel::default()
                 .frame(egui::Frame::default().inner_margin(7.0).fill(bg))
                 .show(egui_ctx, |ui| {
-                    text_editor(egui_ctx, ui, state, &params);
+                    let rect = ui.available_rect_before_wrap();
+
+                    ui.allocate_ui_at_rect(rect, |ui| {
+                        piano_roll.draw(ui);
+                    });
+
+                    ui.allocate_ui_at_rect(rect, |ui| {
+                        text_editor(egui_ctx, ui, state, &params);
+                    });
                 });
         },
     )
@@ -99,8 +111,7 @@ fn text_editor(
     params: &Arc<Parameters>,
 ) {
     ScrollArea::both().stick_to_bottom(true).show(ui, |ui| {
-        // this can happen at least on initialization
-        // we need to sync the state somehow
+        // we need to sync the state
         {
             let index = params.selected_snippet_index();
             if let Some(snippet) = params
@@ -118,7 +129,7 @@ fn text_editor(
 
         let output = CodeEditor::default()
             .id_source("code editor")
-            .with_rows(30)
+            .with_rows(31)
             .with_fontsize(13.0)
             .vscroll(false)
             .with_theme(ColorTheme::AYU_MIRAGE)
@@ -244,7 +255,7 @@ fn koto_syntax() -> Syntax {
         .with_special(["false", "null", "self", "true"])
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 struct GuiState {
     console: Vec<PipeMessage>,
     // to prevent locks, we clone the whole snippet code, when the selected snippet is changed. then

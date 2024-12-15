@@ -22,16 +22,13 @@ impl Orchestrator {
     pub(crate) fn set_patterns(&mut self, patterns: Vec<Pattern>, quantization: f64) {
         self.players = patterns
             .into_iter()
-            .map(|patt| match self.players.pop() {
-                Some(mut player) => {
-                    player.set_pattern(patt, quantization);
-                    player
-                }
-                None => {
-                    let mut player = Player::new(self.pipe_in.clone());
-                    player.set_pattern(patt, quantization);
-                    player
-                }
+            .map(|patt| {
+                let mut player = self
+                    .players
+                    .pop()
+                    .unwrap_or_else(|| Player::new(self.pipe_in.clone()));
+                player.set_pattern(patt, quantization);
+                player
             })
             .collect();
     }
