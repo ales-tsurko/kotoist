@@ -9,6 +9,7 @@ mod scale;
 pub(crate) struct Orchestrator {
     pipe_in: PipeIn,
     players: Vec<Player>,
+    buffer: Vec<Event>,
 }
 
 impl Orchestrator {
@@ -16,6 +17,7 @@ impl Orchestrator {
         Self {
             pipe_in,
             players: Vec::new(),
+            buffer: Vec::with_capacity(512),
         }
     }
 
@@ -37,12 +39,16 @@ impl Orchestrator {
         &mut self,
         is_playing: bool,
         transport: &Transport,
-        block_size: usize,
-    ) -> Vec<Event> {
+        frame_offset: usize,
+    ) -> &[Event] {
+        self.buffer.clear();
+
         self.players
             .iter_mut()
-            .flat_map(|p| p.tick(is_playing, transport, block_size))
-            .collect()
+            .flat_map(|p| p.tick(is_playing, transport, frame_offset))
+            .for_each(|e| self.buffer.push(e.clone()));
+
+        &self.buffer
     }
 }
 
@@ -58,6 +64,7 @@ struct Player {
     next_note_on_pos: f64,
     last_position: f64,
     note_offs: Vec<ScheduledEvent>,
+    buffer: Vec<Event>,
 }
 
 impl Player {
@@ -71,6 +78,7 @@ impl Player {
             next_note_on_pos: 0.0,
             last_position: 0.0,
             note_offs: Vec::new(),
+            buffer: Vec::with_capacity(512),
         }
     }
 
@@ -79,55 +87,63 @@ impl Player {
         self.quantization = quantization;
     }
 
-    fn tick(&mut self, is_playing: bool, transport: &Transport, block_size: usize) -> Vec<Event> {
+    fn tick(&mut self, is_playing: bool, transport: &Transport, frame_offset: usize) -> &[Event] {
         if !is_playing {
             self.next_note_on_pos -= self.last_position;
+            self.buffer.clear();
             // return the note offs (if any) to prevent endless tails
-            // after that just clone and return an empty vector (because of .clear())
-            let res = self
-                .note_offs
-                .clone()
-                .into_iter()
-                .map(|e| e.event)
-                .collect();
-            self.note_offs.clear();
+            if !self.note_offs.is_empty() {
+                self.buffer.append(
+                    &mut self
+                        .note_offs
+                        .clone()
+                        .into_iter()
+                        .map(|e| e.event)
+                        .collect::<Vec<Event>>(),
+                );
+                self.note_offs.clear();
+            }
 
-            return res;
+            return &self.buffer;
         }
 
         if let Some(pattern) = self.requested.take() {
-            let position = quantized_position(self.quantization, transport);
+            let position = quantized_position(self.quantization, transport, frame_offset);
             self.scheduled = Some(ScheduledPattern { position, pattern });
         }
 
-        self.adjust_position(transport, block_size);
+        self.adjust_position(transport, frame_offset);
 
         self.try_queue(self.last_position);
 
-        let mut result = vec![];
+        self.buffer.clear();
 
-        for n in 0..block_size {
-            result.append(&mut self.note_offs_at(self.last_position + n as f64));
-            if let Some(event) = self.next_event(n, transport.position, transport.beat_length) {
-                result.push(event.event);
-            }
+        let mut note_offs = self.note_offs_at(self.last_position);
+
+        self.buffer.append(&mut note_offs);
+
+        if let Some(event) =
+            self.next_event(frame_offset, transport.position, transport.beat_length)
+        {
+            self.buffer.push(event.event);
         }
 
-        result
+        &self.buffer
     }
 
     // adjust next note-on position on cursor jump
-    fn adjust_position(&mut self, transport: &Transport, block_size: usize) {
-        // if the difference is more than block_size + a sample, we consider it a jump
-        if (transport.position - self.last_position).abs() > (block_size + 1) as f64 {
-            self.next_note_on_pos = quantized_position(self.quantization, transport);
-            // call note off for all on the next sample
+    fn adjust_position(&mut self, transport: &Transport, frame_offset: usize) {
+        // if the difference is more than two samples, we consider it a jump
+        let position = transport.position + frame_offset as f64;
+        if (position - self.last_position).abs() > 2.0 {
+            self.next_note_on_pos = quantized_position(self.quantization, transport, frame_offset);
+            // call note off for all notes
             self.note_offs
                 .iter_mut()
-                .for_each(|v| v.position = transport.position + 1.0);
+                .for_each(|v| v.position = transport.position);
         }
 
-        self.last_position = transport.position;
+        self.last_position = position;
     }
 
     fn note_offs_at(&mut self, position: f64) -> Vec<Event> {
@@ -177,8 +193,6 @@ impl Player {
         position: f64,
         beat_length: f64,
     ) -> Option<ScheduledEvent> {
-        let position = position + frame_offset as f64;
-
         if let Some(stream) = &mut self.stream {
             if position < self.next_note_on_pos {
                 return None;
@@ -187,7 +201,7 @@ impl Player {
             match stream.pattern.try_next(frame_offset) {
                 Ok(event) => return event.map(|e| self.schedule_events(position, beat_length, e)),
                 Err(e) => {
-                    // we need to remove stream here as subsequent calls of next, will crash Koto
+                    // we need to remove stream here, as subsequent calls of next will crash Koto
                     self.stream = None;
                     self.pipe_in.send(PipeMessage::Error(format!("{}\n", e)));
                     return None;
@@ -221,13 +235,14 @@ impl Player {
 
 // get next quantazied position - i.e. the position at which the pattern should play taking the
 // quantization into account
-fn quantized_position(quantization: f64, transport: &Transport) -> f64 {
+fn quantized_position(quantization: f64, transport: &Transport, frame_offset: usize) -> f64 {
+    let position = transport.position + frame_offset as f64;
     if quantization == 0.0 {
-        return transport.position;
+        return position;
     }
     let quant_samples = quantization * transport.beat_length;
-    let offset = quant_samples - (transport.position % quant_samples);
-    transport.position + offset
+    let offset = quant_samples - (position % quant_samples);
+    position + offset
 }
 
 #[derive(Debug)]
@@ -258,19 +273,22 @@ mod test {
             position: 1.0,
         };
 
-        assert_eq!(quantized_position(1.0, &transport), beat_length);
+        assert_eq!(quantized_position(1.0, &transport, 0), beat_length);
 
         for n in 0..100 {
             transport.position = 42.0 * (n as f64 / 100.0) * sample_rate;
             let quant = 1.5;
             let quant_samples = quant * beat_length;
-            assert_eq!(quantized_position(quant, &transport) % quant_samples, 0.0);
+            assert_eq!(
+                quantized_position(quant, &transport, 0) % quant_samples,
+                0.0
+            );
         }
 
         transport.position = sample_rate;
         let quant_samples = beat_length; // 1.0 s * beat_length
         assert_eq!(
-            quantized_position(1.0, &transport),
+            quantized_position(1.0, &transport, 0),
             sample_rate + quant_samples
         );
     }

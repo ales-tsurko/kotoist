@@ -1,18 +1,31 @@
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::{atomic::Ordering, mpsc, Arc, Mutex};
 
 use egui_glow::glow;
 use glow::HasContext as _;
+use nih_plug::prelude::AtomicF32;
 use nih_plug_egui::egui;
 
-static mut COUNTER: f32 = 0.0;
-
-#[derive(Default)]
 pub(crate) struct PianoRoll {
+    note_receiver: Mutex<mpsc::Receiver<Event>>,
+    cursor_in_beats: Arc<AtomicF32>,
     notes: Arc<Mutex<Option<NotesGl>>>,
     gutters: Arc<Mutex<Option<GuttersGl>>>,
 }
 
 impl PianoRoll {
+    pub(crate) fn new(
+        note_receiver: mpsc::Receiver<Event>,
+        cursor_in_beats: Arc<AtomicF32>,
+    ) -> Self {
+        Self {
+            note_receiver: Mutex::new(note_receiver),
+            cursor_in_beats,
+            notes: Default::default(),
+            gutters: Default::default(),
+        }
+    }
+
     pub(crate) fn draw(&self, ui: &mut egui::Ui) {
         egui::Frame::canvas(ui.style()).show(ui, |ui| {
             let rect = ui.available_rect_before_wrap();
@@ -33,56 +46,34 @@ impl PianoRoll {
             });
 
             let notes_gl = self.notes.clone();
+            let note = self.note_receiver.lock().unwrap().try_recv().ok();
+            let position_in_beats = self.cursor_in_beats.load(Ordering::Relaxed);
 
             painter.add(egui::PaintCallback {
                 rect,
                 callback: Arc::new(egui_glow::CallbackFn::new(move |_, gl_painter| {
                     let mut pr_notes = notes_gl.lock().unwrap();
                     if pr_notes.is_none() {
-                        *pr_notes = Some(NotesGl::new(
-                            gl_painter.gl(),
-                            &[
-                                NoteInstance {
-                                    pitch: 0.0,
-                                    channel: 0.0,
-                                    start_time: 0.0,
-                                    off_time: 1.0,
-                                },
-                                NoteInstance {
-                                    pitch: 12.0,
-                                    channel: 0.0,
-                                    start_time: 0.0,
-                                    off_time: 1.0,
-                                },
-                                NoteInstance {
-                                    pitch: 16.0,
-                                    channel: 15.0,
-                                    start_time: 1.0,
-                                    off_time: 2.0,
-                                },
-                                NoteInstance {
-                                    pitch: 19.0,
-                                    channel: 5.0,
-                                    start_time: 1.0,
-                                    off_time: 2.0,
-                                },
-                                NoteInstance {
-                                    pitch: 35.0,
-                                    channel: 0.0,
-                                    start_time: 0.0,
-                                    off_time: 1.0,
-                                },
-                            ],
-                        ));
+                        *pr_notes = Some(NotesGl::new(gl_painter.gl()));
                     }
 
-                    unsafe {
-                        COUNTER += 1.0 / 60.0;
-                        pr_notes
-                            .as_ref()
-                            .unwrap()
-                            .paint(gl_painter.gl(), COUNTER, 8.0, 0.042);
+                    let pr_notes = pr_notes.as_mut().unwrap();
+
+                    if let Some(note) = note {
+                        match note {
+                            Event::NoteOn { pitch, channel } => {
+                                pr_notes.note_on(gl_painter.gl(), pitch, channel, position_in_beats)
+                            }
+                            Event::NoteOff { pitch, channel } => pr_notes.note_off(
+                                gl_painter.gl(),
+                                pitch,
+                                channel,
+                                position_in_beats,
+                            ),
+                        }
                     }
+
+                    pr_notes.paint(gl_painter.gl(), position_in_beats, 4.0, 0.042);
                 })),
             });
         });
@@ -92,55 +83,48 @@ impl PianoRoll {
 struct NotesGl {
     program: glow::Program,
     vao: glow::VertexArray,
-    instance_count: i32,
+    vbo_instances: glow::Buffer,
+    notes: HashMap<(u8, u8), Note>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum Event {
+    NoteOn { pitch: u8, channel: u8 },
+    NoteOff { pitch: u8, channel: u8 },
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct NoteInstance {
-    pitch: f32,
-    channel: f32,
-    start_time: f32,
-    off_time: f32,
+pub(crate) struct Note {
+    pub(crate) pitch: f32,
+    pub(crate) channel: f32,
+    pub(crate) start_time: f32,
     // off_time < start_time means note is still on
-    // duration can be computed as off_time - start_time if off_time > start_time
+    pub(crate) off_time: f32,
 }
 
 impl NotesGl {
-    fn new(gl: &glow::Context, notes: &[NoteInstance]) -> Self {
+    fn new(gl: &glow::Context) -> Self {
         let vs = include_str!("note.vert");
         let fs = include_str!("note.frag");
 
         unsafe {
-            // Compile program
             let program = gl.create_program().unwrap();
-
             let vs_handle = gl.create_shader(glow::VERTEX_SHADER).unwrap();
             gl.shader_source(vs_handle, vs);
             gl.compile_shader(vs_handle);
-            assert!(
-                gl.get_shader_compile_status(vs_handle),
-                "VS: {}",
-                gl.get_shader_info_log(vs_handle)
-            );
+            assert!(gl.get_shader_compile_status(vs_handle));
             gl.attach_shader(program, vs_handle);
 
             let fs_handle = gl.create_shader(glow::FRAGMENT_SHADER).unwrap();
             gl.shader_source(fs_handle, fs);
             gl.compile_shader(fs_handle);
-            assert!(
-                gl.get_shader_compile_status(fs_handle),
-                "FS: {}",
-                gl.get_shader_info_log(fs_handle)
-            );
+            assert!(gl.get_shader_compile_status(fs_handle));
             gl.attach_shader(program, fs_handle);
 
             gl.link_program(program);
-            assert!(
-                gl.get_program_link_status(program),
-                "Prog: {}",
-                gl.get_program_info_log(program)
-            );
+            assert!(gl.get_program_link_status(program));
+
             gl.detach_shader(program, vs_handle);
             gl.detach_shader(program, fs_handle);
             gl.delete_shader(vs_handle);
@@ -149,7 +133,6 @@ impl NotesGl {
             let vao = gl.create_vertex_array().unwrap();
             gl.bind_vertex_array(Some(vao));
 
-            // A unit quad for a single note instance
             let vertices: [f32; 8] = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5];
             let indices: [u32; 6] = [0, 1, 2, 2, 3, 0];
 
@@ -171,24 +154,11 @@ impl NotesGl {
 
             // a_pos
             gl.enable_vertex_attrib_array(0);
-            gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 2 * 4, 0);
-
-            // Instance data
-            let mut instance_data = Vec::with_capacity(notes.len() * 4);
-            for n in notes {
-                instance_data.push(n.pitch);
-                instance_data.push(n.channel);
-                instance_data.push(n.start_time);
-                instance_data.push(n.off_time);
-            }
+            gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
 
             let vbo_instances = gl.create_buffer().unwrap();
             gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo_instances));
-            gl.buffer_data_u8_slice(
-                glow::ARRAY_BUFFER,
-                bytemuck::cast_slice(&instance_data),
-                glow::STATIC_DRAW,
-            );
+            gl.buffer_data_size(glow::ARRAY_BUFFER, 0, glow::DYNAMIC_DRAW);
 
             let stride = 4 * 4; // pitch, channel, start_time, off_time (4 floats)
             let mut offset = 0;
@@ -217,12 +187,77 @@ impl NotesGl {
             Self {
                 program,
                 vao,
-                instance_count: notes.len() as i32,
+                vbo_instances,
+                notes: HashMap::new(),
             }
         }
     }
 
-    fn paint(&self, gl: &glow::Context, time: f32, beats_to_show: f32, visual_width: f32) {
+    fn note_on(&mut self, gl: &glow::Context, pitch: u8, channel: u8, start_time: f32) {
+        if pitch > 127 || channel > 15 {
+            return;
+        }
+        self.notes.insert(
+            (channel, pitch),
+            Note {
+                pitch: pitch as f32,
+                channel: channel as f32,
+                start_time,
+                off_time: -start_time,
+            },
+        );
+        self.update_gpu_data(gl);
+    }
+
+    fn note_off(&mut self, gl: &glow::Context, pitch: u8, channel: u8, off_time: f32) {
+        if pitch > 127 || channel > 15 {
+            return;
+        }
+
+        if let Some(n) = self.notes.get_mut(&(channel, pitch)) {
+            n.off_time = off_time;
+            self.update_gpu_data(gl);
+        };
+    }
+
+    fn update_gpu_data(&self, gl: &glow::Context) {
+        let mut instance_data = Vec::with_capacity(self.notes.len() * 4);
+        for n in self.notes.values() {
+            instance_data.push(n.pitch);
+            instance_data.push(n.channel);
+            instance_data.push(n.start_time);
+            instance_data.push(n.off_time);
+        }
+
+        unsafe {
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo_instances));
+            gl.buffer_data_u8_slice(
+                glow::ARRAY_BUFFER,
+                bytemuck::cast_slice(&instance_data),
+                glow::DYNAMIC_DRAW,
+            );
+        }
+    }
+
+    fn clean_up_notes(&mut self, time: f32) {
+        self.notes = self
+            .notes
+            .iter()
+            .filter(|(_, n)| {
+                // VERIFY: wrong logic here?
+                n.start_time < time || n.off_time < time
+            })
+            .map(|(key, value)| (*key, *value))
+            .collect();
+    }
+
+    fn paint(&mut self, gl: &glow::Context, time: f32, beats_to_show: f32, visual_width: f32) {
+        // self.clean_up_notes(time);
+        let instance_count = self.notes.len() as i32;
+        if instance_count == 0 {
+            return;
+        }
+
         unsafe {
             gl.use_program(Some(self.program));
             let u_time = gl.get_uniform_location(self.program, "u_time");
@@ -235,13 +270,7 @@ impl NotesGl {
             gl.bind_vertex_array(Some(self.vao));
             gl.enable(glow::BLEND);
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
-            gl.draw_elements_instanced(
-                glow::TRIANGLES,
-                6,
-                glow::UNSIGNED_INT,
-                0,
-                self.instance_count,
-            );
+            gl.draw_elements_instanced(glow::TRIANGLES, 6, glow::UNSIGNED_INT, 0, instance_count);
             gl.bind_vertex_array(None);
         }
     }

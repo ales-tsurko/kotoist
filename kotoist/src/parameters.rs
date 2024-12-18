@@ -8,7 +8,7 @@ use nih_plug::prelude::*;
 use nih_plug_egui::EguiState;
 use serde::{Deserialize, Serialize};
 
-use crate::editor::WINDOW_SIZE;
+use crate::editor::{PianoRollEvent, WINDOW_SIZE};
 use crate::interpreter::Interpreter;
 use crate::orchestrator::Orchestrator;
 use crate::pipe::PipeIn;
@@ -16,6 +16,8 @@ use crate::pipe::PipeIn;
 #[derive(Params)]
 pub(crate) struct Parameters {
     interpreter_sender: mpsc::Sender<InterpreterMessage>,
+    piano_roll_sender: mpsc::Sender<PianoRollEvent>,
+    cursor_in_beats: Arc<AtomicF32>,
     pub(crate) orchestrator: Arc<Mutex<Orchestrator>>,
     #[persist = "editor-state"]
     pub(crate) editor_state: Arc<EguiState>,
@@ -26,7 +28,7 @@ pub(crate) struct Parameters {
 }
 
 impl Parameters {
-    pub(crate) fn new(pipe_in: PipeIn) -> Self {
+    pub(crate) fn new(pipe_in: PipeIn, piano_roll_sender: mpsc::Sender<PianoRollEvent>) -> Self {
         let orchestrator = Arc::new(Mutex::new(Orchestrator::new(pipe_in.clone())));
         // there always should be at least one snippet
         let snippets = Arc::new(RwLock::new(vec![Snippet::with_random_name()]));
@@ -35,8 +37,10 @@ impl Parameters {
 
         Self {
             interpreter_sender,
+            cursor_in_beats: Default::default(),
             orchestrator: orchestrator.clone(),
             selected_snippet: Default::default(),
+            piano_roll_sender,
             snippets,
             editor_state: EguiState::from_size(WINDOW_SIZE.0, WINDOW_SIZE.1),
         }
@@ -104,6 +108,28 @@ impl Parameters {
         interpreter_sender
     }
 
+    pub(crate) fn clone_cursor(&self) -> Arc<AtomicF32> {
+        self.cursor_in_beats.clone()
+    }
+
+    pub(crate) fn on_beats_position_changed(&self, value: f32) {
+        self.cursor_in_beats.store(value, Ordering::Relaxed);
+    }
+
+    pub(crate) fn send_piano_roll_note_on(&self, pitch: u8, channel: u8) {
+        let pitch = pitch % 36;
+        let _ = self
+            .piano_roll_sender
+            .send(PianoRollEvent::NoteOn { pitch, channel });
+    }
+
+    pub(crate) fn send_piano_roll_note_off(&self, pitch: u8, channel: u8) {
+        let pitch = pitch % 36;
+        let _ = self
+            .piano_roll_sender
+            .send(PianoRollEvent::NoteOff { pitch, channel });
+    }
+
     pub(crate) fn set_selected_snippet_index(&self, index: usize) {
         self.selected_snippet.store(index, Ordering::Relaxed);
     }
@@ -160,35 +186,4 @@ impl Snippet {
 pub(crate) struct PianoKey {
     pub(crate) name: String,
     pub(crate) is_black: bool,
-}
-
-// note number to piano key
-const PITCH_NAMES: [&str; 12] = [
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-];
-fn nn_to_pk(nn: usize) -> PianoKey {
-    let pitch = PITCH_NAMES[nn % PITCH_NAMES.len()];
-    let octave = nn / 12;
-    let name = format!("{pitch}{octave}");
-
-    PianoKey {
-        is_black: name.contains('#'),
-        name,
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_nn_to_pk() {
-        assert_eq!(
-            nn_to_pk(60),
-            PianoKey {
-                name: "C5".to_string(),
-                is_black: false
-            }
-        )
-    }
 }

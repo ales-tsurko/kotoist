@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use nih_plug::editor::Editor;
@@ -13,13 +13,16 @@ use crate::pipe::{Message as PipeMessage, PipeOut};
 
 mod piano_roll;
 
+pub(crate) use piano_roll::Event as PianoRollEvent;
+
 pub(crate) const WINDOW_SIZE: (u32, u32) = (700, 734);
 
 pub(crate) fn create_editor(
     params: Arc<Parameters>,
     pipe_out: Arc<Mutex<PipeOut>>,
+    piano_roll_receiver: mpsc::Receiver<PianoRollEvent>,
 ) -> Option<Box<dyn Editor>> {
-    let piano_roll = PianoRoll::default();
+    let piano_roll = PianoRoll::new(piano_roll_receiver, params.clone_cursor());
     create_egui_editor(
         params.editor_state.clone(),
         GuiState::default(),

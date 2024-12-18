@@ -11,7 +11,7 @@
     unused_qualifications,
     unreachable_pub
 )]
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
 use nih_plug::prelude::*;
 
@@ -36,8 +36,13 @@ pub struct Kotoist {
 impl Default for Kotoist {
     fn default() -> Self {
         let (pipe_in, pipe_out) = pipe::new_pipe();
-        let params = Arc::new(Parameters::new(pipe_in));
-        let editor = create_editor(params.clone(), Arc::new(Mutex::new(pipe_out)));
+        let (piano_roll_sender, piano_roll_receiver) = mpsc::channel();
+        let params = Arc::new(Parameters::new(pipe_in, piano_roll_sender));
+        let editor = create_editor(
+            params.clone(),
+            Arc::new(Mutex::new(pipe_out)),
+            piano_roll_receiver,
+        );
 
         Self { params, editor }
     }
@@ -49,12 +54,12 @@ impl Plugin for Kotoist {
     const URL: &'static str = "https://kotoist.alestsurko.by";
     const EMAIL: &'static str = "ales.tsurko@gmail.com";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    // const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
-    //     main_input_channels: NonZeroU32::new(NUM_CHANNELS),
-    //     main_output_channels: NonZeroU32::new(NUM_CHANNELS),
-    //     ..AudioIOLayout::const_default()
-    // }];
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
+        main_input_channels: NonZeroU32::new(NUM_CHANNELS),
+        main_output_channels: NonZeroU32::new(NUM_CHANNELS),
+        ..AudioIOLayout::const_default()
+    }];
+    // const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
     const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::MidiCCs;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -91,19 +96,41 @@ impl Plugin for Kotoist {
         if let Ok(mut orch) = self.params.orchestrator.try_lock() {
             self.process_incoming_events(context, buffer.samples());
 
-            let transport = context.transport();
+            // update beat position in params
+            if let Some(position) = context.transport().pos_beats() {
+                self.params.on_beats_position_changed(position as f32)
+            }
 
-            if transport.playing {
+            let transport = orchestrator::Transport::from(context.transport());
+            let is_playing = context.transport().playing;
+
+            if is_playing {
                 self.params.send_interpreter_msg(InterpreterMessage::OnPlay);
             } else {
                 self.params
                     .send_interpreter_msg(InterpreterMessage::OnPause);
             }
 
-            orch.tick(transport.playing, &transport.into(), buffer.samples())
-                .into_iter()
-                .flat_map(|e| plugin_note_from_event(e, buffer.samples()))
-                .for_each(|e| context.send_event(e));
+            // send generated events
+            for frame_offset in 0..buffer.samples() {
+                orch.tick(is_playing, &transport, frame_offset)
+                    .iter()
+                    .flat_map(plugin_note_from_event)
+                    .for_each(|e| {
+                        context.send_event(e);
+
+                        match e {
+                            PluginNoteEvent::<Self>::NoteOn { channel, note, .. } => {
+                                self.params.send_piano_roll_note_on(note, channel)
+                            }
+                            PluginNoteEvent::<Self>::NoteOff { channel, note, .. } => {
+                                self.params.send_piano_roll_note_off(note, channel)
+                            }
+
+                            _ => (),
+                        }
+                    });
+            }
         }
 
         ProcessStatus::KeepAlive
@@ -175,14 +202,14 @@ impl From<&Transport> for orchestrator::Transport {
     }
 }
 
-fn plugin_note_from_event(event: Event, block_size: usize) -> Vec<PluginNoteEvent<Kotoist>> {
+fn plugin_note_from_event(event: &Event) -> Vec<PluginNoteEvent<Kotoist>> {
     event
         .value
         .iter()
         .filter_map(|v| match v {
             EventValue::Note(nn, vel, ch) => Some(if *vel > 0 {
                 PluginNoteEvent::<Kotoist>::NoteOn {
-                    timing: (event.frame_offset % block_size) as u32,
+                    timing: event.frame_offset as u32,
                     channel: *ch,
                     note: *nn,
                     velocity: *vel as f32 / 127.0,
@@ -190,7 +217,7 @@ fn plugin_note_from_event(event: Event, block_size: usize) -> Vec<PluginNoteEven
                 }
             } else {
                 PluginNoteEvent::<Kotoist>::NoteOff {
-                    timing: (event.frame_offset % block_size) as u32,
+                    timing: event.frame_offset as u32,
                     channel: *ch,
                     note: *nn,
                     velocity: 0.0,
