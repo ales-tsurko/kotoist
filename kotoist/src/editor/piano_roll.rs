@@ -84,23 +84,8 @@ struct NotesGl {
     program: glow::Program,
     vao: glow::VertexArray,
     vbo_instances: glow::Buffer,
-    notes: HashMap<(u8, u8), Note>,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub(crate) enum Event {
-    NoteOn { pitch: u8, channel: u8 },
-    NoteOff { pitch: u8, channel: u8 },
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub(crate) struct Note {
-    pub(crate) pitch: f32,
-    pub(crate) channel: f32,
-    pub(crate) start_time: f32,
-    // off_time < start_time means note is still on
-    pub(crate) off_time: f32,
+    notes: HashMap<(u8, u8), Vec<Note>>,
+    last_position: f32,
 }
 
 impl NotesGl {
@@ -189,6 +174,7 @@ impl NotesGl {
                 vao,
                 vbo_instances,
                 notes: HashMap::new(),
+                last_position: 0.0,
             }
         }
     }
@@ -197,15 +183,12 @@ impl NotesGl {
         if pitch > 127 || channel > 15 {
             return;
         }
-        self.notes.insert(
-            (channel, pitch),
-            Note {
-                pitch: pitch as f32,
-                channel: channel as f32,
-                start_time,
-                off_time: -start_time,
-            },
-        );
+        self.notes.entry((channel, pitch)).or_default().push(Note {
+            pitch: pitch as f32,
+            channel: channel as f32,
+            start_time,
+            off_time: -start_time,
+        });
         self.update_gpu_data(gl);
     }
 
@@ -214,15 +197,18 @@ impl NotesGl {
             return;
         }
 
-        if let Some(n) = self.notes.get_mut(&(channel, pitch)) {
-            n.off_time = off_time;
-            self.update_gpu_data(gl);
-        };
+        if let Some(vec) = self.notes.get_mut(&(channel, pitch)) {
+            // Find the latest note that is still on
+            if let Some(n) = vec.iter_mut().rev().find(|n| n.off_time <= n.start_time) {
+                n.off_time = off_time;
+                self.update_gpu_data(gl);
+            }
+        }
     }
 
     fn update_gpu_data(&self, gl: &glow::Context) {
-        let mut instance_data = Vec::with_capacity(self.notes.len() * 4);
-        for n in self.notes.values() {
+        let mut instance_data = Vec::new();
+        for n in self.notes.values().flatten() {
             instance_data.push(n.pitch);
             instance_data.push(n.channel);
             instance_data.push(n.start_time);
@@ -239,21 +225,18 @@ impl NotesGl {
         }
     }
 
-    fn clean_up_notes(&mut self, time: f32) {
-        self.notes = self
-            .notes
-            .iter()
-            .filter(|(_, n)| {
-                // VERIFY: wrong logic here?
-                n.start_time < time || n.off_time < time
-            })
-            .map(|(key, value)| (*key, *value))
-            .collect();
+    fn maybe_cleanup(&mut self, gl: &glow::Context, time: f32) {
+        if time < self.last_position {
+            self.notes.clear();
+            self.update_gpu_data(gl);
+        }
+        self.last_position = time;
     }
 
-    fn paint(&mut self, gl: &glow::Context, time: f32, beats_to_show: f32, visual_width: f32) {
-        // self.clean_up_notes(time);
-        let instance_count = self.notes.len() as i32;
+    fn paint(&mut self, gl: &glow::Context, time: f32, visible_beats: f32, visual_width: f32) {
+        self.maybe_cleanup(gl, time);
+
+        let instance_count = self.notes.values().map(|v| v.len() as i32).sum();
         if instance_count == 0 {
             return;
         }
@@ -264,7 +247,7 @@ impl NotesGl {
             let u_beats = gl.get_uniform_location(self.program, "u_beats");
             let u_visual_width = gl.get_uniform_location(self.program, "u_visual_width");
             gl.uniform_1_f32(u_time.as_ref(), time);
-            gl.uniform_1_f32(u_beats.as_ref(), beats_to_show);
+            gl.uniform_1_f32(u_beats.as_ref(), visible_beats);
             gl.uniform_1_f32(u_visual_width.as_ref(), visual_width);
 
             gl.bind_vertex_array(Some(self.vao));
@@ -274,6 +257,22 @@ impl NotesGl {
             gl.bind_vertex_array(None);
         }
     }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub(crate) struct Note {
+    pub(crate) pitch: f32,
+    pub(crate) channel: f32,
+    pub(crate) start_time: f32,
+    // off_time < start_time means note is still on
+    pub(crate) off_time: f32,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum Event {
+    NoteOn { pitch: u8, channel: u8 },
+    NoteOff { pitch: u8, channel: u8 },
 }
 
 pub(crate) struct GuttersGl {
