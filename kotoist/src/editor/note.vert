@@ -42,7 +42,6 @@ void main() {
     }
 
     float y_tail = y_head + length;
-
     float draw_y = y_head + (a_pos.y + 0.5) * (y_tail - y_head);
 
     float x_note_pos = a_pitch / 36.0 * 2.0 - 1.0;

@@ -1,5 +1,8 @@
 use std::collections::HashMap;
-use std::sync::{atomic::Ordering, mpsc, Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc, Arc, Mutex,
+};
 
 use egui_glow::glow;
 use glow::HasContext as _;
@@ -9,6 +12,7 @@ use nih_plug_egui::egui;
 pub(crate) struct PianoRoll {
     note_receiver: Mutex<mpsc::Receiver<Event>>,
     cursor_in_beats: Arc<AtomicF32>,
+    gl_context_validity: Arc<AtomicBool>,
     notes: Arc<Mutex<Option<NotesGl>>>,
     gutters: Arc<Mutex<Option<GuttersGl>>>,
 }
@@ -17,10 +21,12 @@ impl PianoRoll {
     pub(crate) fn new(
         note_receiver: mpsc::Receiver<Event>,
         cursor_in_beats: Arc<AtomicF32>,
+        gl_context_validity: Arc<AtomicBool>,
     ) -> Self {
         Self {
             note_receiver: Mutex::new(note_receiver),
             cursor_in_beats,
+            gl_context_validity,
             notes: Default::default(),
             gutters: Default::default(),
         }
@@ -31,14 +37,26 @@ impl PianoRoll {
             let rect = ui.available_rect_before_wrap();
             let painter = ui.painter();
 
+            let is_gl_valid = { self.gl_context_validity.load(Ordering::Relaxed) };
+            let gl_context_validity = self.gl_context_validity.clone();
+
             let gutters = self.gutters.clone();
 
             painter.add(egui::PaintCallback {
                 rect,
                 callback: Arc::new(egui_glow::CallbackFn::new(move |_, gl_painter| {
                     let mut pr_gutters = gutters.lock().unwrap();
-                    if pr_gutters.is_none() {
-                        *pr_gutters = Some(GuttersGl::new(gl_painter.gl(), 3));
+
+                    match (pr_gutters.as_ref(), is_gl_valid) {
+                        (None, _) => {
+                            pr_gutters.replace(GuttersGl::new(gl_painter.gl(), 3));
+                        }
+                        (Some(gutters), false) => {
+                            gutters.destroy(gl_painter.gl());
+                            pr_gutters.replace(GuttersGl::new(gl_painter.gl(), 3));
+                            gl_context_validity.store(true, Ordering::Relaxed);
+                        }
+                        _ => (),
                     }
 
                     pr_gutters.as_ref().unwrap().paint(gl_painter.gl());
@@ -48,13 +66,22 @@ impl PianoRoll {
             let notes_gl = self.notes.clone();
             let note = self.note_receiver.lock().unwrap().try_recv().ok();
             let position_in_beats = self.cursor_in_beats.load(Ordering::Relaxed);
+            let gl_context_validity = self.gl_context_validity.clone();
 
             painter.add(egui::PaintCallback {
                 rect,
                 callback: Arc::new(egui_glow::CallbackFn::new(move |_, gl_painter| {
                     let mut pr_notes = notes_gl.lock().unwrap();
-                    if pr_notes.is_none() {
-                        *pr_notes = Some(NotesGl::new(gl_painter.gl()));
+                    match (pr_notes.as_ref(), is_gl_valid) {
+                        (None, _) => {
+                            pr_notes.replace(NotesGl::new(gl_painter.gl()));
+                        }
+                        (Some(notes), false) => {
+                            notes.destroy(gl_painter.gl());
+                            pr_notes.replace(NotesGl::new(gl_painter.gl()));
+                            gl_context_validity.store(true, Ordering::Relaxed);
+                        }
+                        _ => (),
                     }
 
                     let pr_notes = pr_notes.as_mut().unwrap();
@@ -257,6 +284,14 @@ impl NotesGl {
             gl.bind_vertex_array(None);
         }
     }
+
+    fn destroy(&self, gl: &glow::Context) {
+        unsafe {
+            gl.delete_program(self.program);
+            gl.delete_vertex_array(self.vao);
+            gl.delete_buffer(self.vbo_instances);
+        }
+    }
 }
 
 #[repr(C)]
@@ -405,6 +440,13 @@ impl GuttersGl {
             gl.bind_vertex_array(Some(self.vao));
             gl.draw_arrays(glow::TRIANGLES, 0, self.vertex_count);
             gl.bind_vertex_array(None);
+        }
+    }
+
+    fn destroy(&self, gl: &glow::Context) {
+        unsafe {
+            gl.delete_program(self.program);
+            gl.delete_vertex_array(self.vao);
         }
     }
 }

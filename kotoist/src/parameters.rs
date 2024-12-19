@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc, Arc, Mutex, RwLock,
 };
 use std::thread;
@@ -18,6 +18,7 @@ pub(crate) struct Parameters {
     interpreter_sender: mpsc::Sender<InterpreterMessage>,
     piano_roll_sender: mpsc::Sender<PianoRollEvent>,
     cursor_in_beats: Arc<AtomicF32>,
+    gl_context_valid: Arc<AtomicBool>,
     pub(crate) orchestrator: Arc<Mutex<Orchestrator>>,
     #[persist = "editor-state"]
     pub(crate) editor_state: Arc<EguiState>,
@@ -41,6 +42,7 @@ impl Parameters {
             orchestrator: orchestrator.clone(),
             selected_snippet: Default::default(),
             piano_roll_sender,
+            gl_context_valid: Default::default(),
             snippets,
             editor_state: EguiState::from_size(WINDOW_SIZE.0, WINDOW_SIZE.1),
         }
@@ -112,8 +114,20 @@ impl Parameters {
         self.cursor_in_beats.clone()
     }
 
+    pub(crate) fn clone_gl_context_validity(&self) -> Arc<AtomicBool> {
+        self.gl_context_valid.clone()
+    }
+
     pub(crate) fn on_beats_position_changed(&self, value: f32) {
         self.cursor_in_beats.store(value, Ordering::Relaxed);
+    }
+
+    pub(crate) fn check_gl_context_valid(&self) {
+        // when the editor has closed, gl context becomes invalid
+        // we have to check frequently, to be able to catch every frame
+        if !self.editor_state.is_open() {
+            self.gl_context_valid.store(false, Ordering::Relaxed);
+        }
     }
 
     pub(crate) fn send_piano_roll_note_on(&self, pitch: u8, channel: u8) {

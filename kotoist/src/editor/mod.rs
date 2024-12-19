@@ -22,7 +22,11 @@ pub(crate) fn create_editor(
     pipe_out: Arc<Mutex<PipeOut>>,
     piano_roll_receiver: mpsc::Receiver<PianoRollEvent>,
 ) -> Option<Box<dyn Editor>> {
-    let piano_roll = PianoRoll::new(piano_roll_receiver, params.clone_cursor());
+    let piano_roll = PianoRoll::new(
+        piano_roll_receiver,
+        params.clone_cursor(),
+        params.clone_gl_context_validity(),
+    );
     create_egui_editor(
         params.editor_state.clone(),
         GuiState::default(),

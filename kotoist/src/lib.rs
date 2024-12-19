@@ -93,6 +93,8 @@ impl Plugin for Kotoist {
         _aux: &mut AuxiliaryBuffers<'_>,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        self.params.check_gl_context_valid();
+
         if let Ok(mut orch) = self.params.orchestrator.try_lock() {
             self.process_incoming_events(context, buffer.samples());
 
