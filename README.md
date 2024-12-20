@@ -5,6 +5,7 @@ VST plugin for live coding using [Koto](koto.dev/) programming language.
 
 ![Screenshot Ableton](screenshots/screenshot-ableton.jpg)
 ![Screenshot FL Studio](screenshots/screenshot-fl.jpg)
+![Video Ableton](screenshots/video-demo.mov)
 
 
 

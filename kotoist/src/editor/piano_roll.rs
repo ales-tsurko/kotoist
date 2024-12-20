@@ -389,7 +389,7 @@ impl GuttersGl {
             let white = is_white_key(i as u8);
 
             let (r, g, b) = if white {
-                (0.03, 0.03, 0.03)
+                (0.05, 0.05, 0.05)
             } else {
                 (0.0, 0.0, 0.0)
             };

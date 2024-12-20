@@ -16,7 +16,7 @@ const float note_width_norm = 1.0/36.0;
 
 
 vec4 get_note_color(float pitch, float channel) {
-    return vec4(0.2 + (channel / 15.0), 0.2 + (pitch/35.0), 0.9, 0.7);
+    return vec4(0.2 + (channel / 15.0), 0.2 + (pitch/35.0), 0.9, 0.66);
 }
 
 void main() {
