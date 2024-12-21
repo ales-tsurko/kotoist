@@ -241,7 +241,9 @@ impl NotesGl {
         if let Some(vec) = self.notes.get_mut(&(channel, pitch)) {
             // Find the latest note that is still on
             if let Some(n) = vec.iter_mut().rev().find(|n| n.off_time <= n.start_time) {
-                n.off_time = off_time;
+                // apply note off position and shorten it by 0.01 beat, to make a gap between notes
+                // of the same pitch
+                n.off_time = off_time - 0.01;
                 self.update_gpu_data(gl);
             }
         }
