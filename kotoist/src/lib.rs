@@ -98,11 +98,6 @@ impl Plugin for Kotoist {
         if let Ok(mut orch) = self.params.orchestrator.try_lock() {
             self.process_incoming_events(context, buffer.samples());
 
-            // update beat position in params
-            if let Some(position) = context.transport().pos_beats() {
-                self.params.on_beats_position_changed(position as f32)
-            }
-
             let transport = orchestrator::Transport::from(context.transport());
             let is_playing = context.transport().playing;
 
@@ -115,6 +110,21 @@ impl Plugin for Kotoist {
 
             // send generated events
             for frame_offset in 0..buffer.samples() {
+                // update beat position in params
+                if let Some(position) = context.transport().pos_beats() {
+                    // calculate beats offset
+                    let beats_per_second = context
+                        .transport()
+                        .tempo
+                        .map(|bpm| bpm / 60.0)
+                        .unwrap_or_default() as f32;
+                    let beats_per_sample = beats_per_second / context.transport().sample_rate;
+                    let beats_offset = beats_per_sample * frame_offset as f32;
+
+                    self.params
+                        .on_beats_position_changed(position as f32 + beats_offset);
+                }
+
                 orch.tick(is_playing, &transport, frame_offset)
                     .iter()
                     .flat_map(plugin_note_from_event)

@@ -15,6 +15,7 @@ pub(crate) struct PianoRoll {
     gl_context_validity: Arc<AtomicBool>,
     notes: Arc<Mutex<Option<NotesGl>>>,
     gutters: Arc<Mutex<Option<GuttersGl>>>,
+    events_buf: Arc<Mutex<Vec<Event>>>,
 }
 
 impl PianoRoll {
@@ -29,6 +30,7 @@ impl PianoRoll {
             gl_context_validity,
             notes: Default::default(),
             gutters: Default::default(),
+            events_buf: Default::default(),
         }
     }
 
@@ -64,9 +66,18 @@ impl PianoRoll {
             });
 
             let notes_gl = self.notes.clone();
-            let note = self.note_receiver.lock().unwrap().try_recv().ok();
             let position_in_beats = self.cursor_in_beats.load(Ordering::Relaxed);
             let gl_context_validity = self.gl_context_validity.clone();
+
+            {
+                let mut events_buf = self.events_buf.lock().unwrap();
+                events_buf.clear();
+                while let Ok(note) = self.note_receiver.lock().unwrap().try_recv() {
+                    events_buf.push(note);
+                }
+            }
+
+            let events = self.events_buf.clone();
 
             painter.add(egui::PaintCallback {
                 rect,
@@ -86,15 +97,18 @@ impl PianoRoll {
 
                     let pr_notes = pr_notes.as_mut().unwrap();
 
-                    if let Some(note) = note {
+                    for note in events.lock().unwrap().iter() {
                         match note {
-                            Event::NoteOn { pitch, channel } => {
-                                pr_notes.note_on(gl_painter.gl(), pitch, channel, position_in_beats)
-                            }
+                            Event::NoteOn { pitch, channel } => pr_notes.note_on(
+                                gl_painter.gl(),
+                                *pitch,
+                                *channel,
+                                position_in_beats,
+                            ),
                             Event::NoteOff { pitch, channel } => pr_notes.note_off(
                                 gl_painter.gl(),
-                                pitch,
-                                channel,
+                                *pitch,
+                                *channel,
                                 position_in_beats,
                             ),
                         }
