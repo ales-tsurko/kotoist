@@ -16,7 +16,7 @@ use crate::pipe::PipeIn;
 #[derive(Params)]
 pub(crate) struct Parameters {
     interpreter_sender: mpsc::Sender<InterpreterMessage>,
-    piano_roll_sender: mpsc::Sender<PianoRollEvent>,
+    piano_roll_sender: mpsc::Sender<Vec<PianoRollEvent>>,
     cursor_in_beats: Arc<AtomicF32>,
     gl_context_valid: Arc<AtomicBool>,
     pub(crate) orchestrator: Arc<Mutex<Orchestrator>>,
@@ -29,7 +29,10 @@ pub(crate) struct Parameters {
 }
 
 impl Parameters {
-    pub(crate) fn new(pipe_in: PipeIn, piano_roll_sender: mpsc::Sender<PianoRollEvent>) -> Self {
+    pub(crate) fn new(
+        pipe_in: PipeIn,
+        piano_roll_sender: mpsc::Sender<Vec<PianoRollEvent>>,
+    ) -> Self {
         let orchestrator = Arc::new(Mutex::new(Orchestrator::new(pipe_in.clone())));
         // there always should be at least one snippet
         let snippets = Arc::new(RwLock::new(vec![Snippet::with_random_name()]));
@@ -130,18 +133,10 @@ impl Parameters {
         }
     }
 
-    pub(crate) fn send_piano_roll_note_on(&self, pitch: u8, channel: u8) {
-        let pitch = pitch % 36;
+    pub(crate) fn send_piano_roll_events(&self, events: Vec<PianoRollEvent>) {
         let _ = self
             .piano_roll_sender
-            .send(PianoRollEvent::NoteOn { pitch, channel });
-    }
-
-    pub(crate) fn send_piano_roll_note_off(&self, pitch: u8, channel: u8) {
-        let pitch = pitch % 36;
-        let _ = self
-            .piano_roll_sender
-            .send(PianoRollEvent::NoteOff { pitch, channel });
+            .send(events);
     }
 
     pub(crate) fn set_selected_snippet_index(&self, index: usize) {

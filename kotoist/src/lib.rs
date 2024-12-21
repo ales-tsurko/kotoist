@@ -15,7 +15,7 @@ use std::sync::{mpsc, Arc, Mutex};
 
 use nih_plug::prelude::*;
 
-use crate::editor::create_editor;
+use crate::editor::{create_editor, PianoRollEvent};
 use crate::orchestrator::{Event, EventValue};
 use crate::parameters::{InterpreterMessage, Parameters};
 
@@ -111,37 +111,55 @@ impl Plugin for Kotoist {
             // send generated events
             for frame_offset in 0..buffer.samples() {
                 // update beat position in params
-                if let Some(position) = context.transport().pos_beats() {
-                    // calculate beats offset
-                    let beats_per_second = context
-                        .transport()
-                        .tempo
-                        .map(|bpm| bpm / 60.0)
-                        .unwrap_or_default() as f32;
-                    let beats_per_sample = beats_per_second / context.transport().sample_rate;
-                    let beats_offset = beats_per_sample * frame_offset as f32;
+                let beats_position = context
+                    .transport()
+                    .pos_beats()
+                    .expect("This plugin can't work without beat position");
+                // calculate beats offset
+                let beats_per_second = context
+                    .transport()
+                    .tempo
+                    .map(|bpm| bpm / 60.0)
+                    .unwrap_or_default() as f32;
+                let beats_per_sample = beats_per_second / context.transport().sample_rate;
+                let beats_offset = beats_per_sample * frame_offset as f32;
+                let beats_position = beats_position as f32 + beats_offset;
 
-                    self.params
-                        .on_beats_position_changed(position as f32 + beats_offset);
-                }
+                self.params.on_beats_position_changed(beats_position);
 
-                orch.tick(is_playing, &transport, frame_offset)
+                let piano_roll_events: Vec<PianoRollEvent> = orch
+                    .tick(is_playing, &transport, frame_offset)
                     .iter()
                     .flat_map(plugin_note_from_event)
-                    .for_each(|e| {
+                    .filter_map(|e| {
                         context.send_event(e);
 
                         match e {
                             PluginNoteEvent::<Self>::NoteOn { channel, note, .. } => {
-                                self.params.send_piano_roll_note_on(note, channel)
+                                Some(PianoRollEvent {
+                                    channel,
+                                    pitch: note % 36,
+                                    position_in_beats: beats_position,
+                                    is_on: true,
+                                })
                             }
                             PluginNoteEvent::<Self>::NoteOff { channel, note, .. } => {
-                                self.params.send_piano_roll_note_off(note, channel)
+                                Some(PianoRollEvent {
+                                    channel,
+                                    pitch: note % 36,
+                                    position_in_beats: beats_position,
+                                    is_on: false,
+                                })
                             }
 
-                            _ => (),
+                            _ => None,
                         }
-                    });
+                    })
+                    .collect();
+
+                if !piano_roll_events.is_empty() {
+                    self.params.send_piano_roll_events(piano_roll_events);
+                }
             }
         }
 

@@ -20,7 +20,7 @@ pub(crate) const WINDOW_SIZE: (u32, u32) = (700, 734);
 pub(crate) fn create_editor(
     params: Arc<Parameters>,
     pipe_out: Arc<Mutex<PipeOut>>,
-    piano_roll_receiver: mpsc::Receiver<PianoRollEvent>,
+    piano_roll_receiver: mpsc::Receiver<Vec<PianoRollEvent>>,
 ) -> Option<Box<dyn Editor>> {
     let piano_roll = PianoRoll::new(
         piano_roll_receiver,
