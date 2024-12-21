@@ -3,7 +3,8 @@ Kotoist
 
 VST plugin for live coding using [Koto](https://koto.dev/) programming language.
 
-https://github.com/user-attachments/assets/b488713b-43dd-4495-a64f-692babbd43be
+https://github.com/user-attachments/assets/c0d91eba-f9dd-441b-8f62-78720210ce5e
+
 
 ![Screenshot Ableton](screenshots/screenshot-ableton.jpg)
 ![Screenshot FL Studio](screenshots/screenshot-fl.jpg)
