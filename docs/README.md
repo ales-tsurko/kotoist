@@ -23,7 +23,6 @@ or `Cmd-Enter` on macOS or `Ctrl-Enter` or other systems. Also, you can evaluate
 a part of the code by selecting it and pressing `Cmd-`\`Ctrl-Enter`.
 
 
-
 ### Writing Scripts
 
 The main function, which connects your DAW with **koto** is `midiout`. The
@@ -47,3 +46,6 @@ The **pattern** is a map with optional values:
 
 You can apply any pattern or combination of them, or write your own patterns to
 any of these keys. The patterns are just **Koto** iterators.
+
+You can split your project into multiple snippets (tabs). When plugin is loaded
+it evaluates all snippets from the rightmost to the leftmost.

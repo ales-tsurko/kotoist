@@ -150,6 +150,13 @@ impl Parameters {
             .send(msg)
             .expect("sending to unbound channel should not fail");
     }
+
+    /// Evals all snippets from the rightmost to the leftmost.
+    pub(crate) fn eval_all_right_to_left(&self) {
+        for snippet in self.snippets.read().unwrap().iter().rev() {
+            self.send_interpreter_msg(InterpreterMessage::EvalCode(snippet.code.clone()));
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

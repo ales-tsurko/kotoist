@@ -72,6 +72,7 @@ impl Plugin for Kotoist {
         _buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
+        self.params.eval_all_right_to_left();
         self.params.send_interpreter_msg(InterpreterMessage::OnLoad);
         true
     }
