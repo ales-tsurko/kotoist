@@ -80,17 +80,17 @@ impl Parameters {
                             interp.on_midiincc(cc, vel, ch)
                         }
 
-                        InterpreterMessage::OnPause => {
+                        InterpreterMessage::OnPause(beat_pos, tempo) => {
                             if is_playing {
                                 is_playing = false;
-                                interp.on_pause();
+                                interp.on_pause(beat_pos, tempo);
                             }
                         }
 
-                        InterpreterMessage::OnPlay => {
+                        InterpreterMessage::OnPlay(beat_pos, tempo) => {
                             if !is_playing {
                                 is_playing = true;
-                                interp.on_play();
+                                interp.on_play(beat_pos, tempo);
                             }
                         }
 
@@ -134,9 +134,7 @@ impl Parameters {
     }
 
     pub(crate) fn send_piano_roll_events(&self, events: Vec<PianoRollEvent>) {
-        let _ = self
-            .piano_roll_sender
-            .send(events);
+        let _ = self.piano_roll_sender.send(events);
     }
 
     pub(crate) fn set_selected_snippet_index(&self, index: usize) {
@@ -162,8 +160,8 @@ pub(crate) enum InterpreterMessage {
     OnLoad,
     OnMidiIn(u8, f32, u8),
     OnMidiInCc(u8, f32, u8),
-    OnPause,
-    OnPlay,
+    OnPause(f64, f64),
+    OnPlay(f64, f64),
     AddSnippet,
     RemoveSnippet(usize),
 }

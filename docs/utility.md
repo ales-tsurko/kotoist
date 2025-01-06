@@ -91,12 +91,12 @@ on_midiincc |cc, value, channel|
 Executes a callback function when playback is started.
 
 ```coffee
-on_play ||
-    print "playing"
+on_play |beat_pos, tempo|
+    print "playing", beat_pos, tempo
 ```
-| Argument | Description                                                     | Default |
-| -------- | --------------------------------------------------------------- | ------- |
-| callback | A function, which will be called, when playback is started.     |         |
+| Argument | Description                                                                          | Default |
+| -------- | ------------------------------------------------------------------------------------ | ------- |
+| callback | A function, receiving the current beat position and tempo, when playback is started. |         |
 
 
 
@@ -106,12 +106,12 @@ on_play ||
 Executes a callback function when playback is paused.
 
 ```coffee
-on_pause ||
-    print "paused"
+on_pause |beat_pos, tempo|
+    print "paused", beat_pos, tempo
 ```
-| Argument | Description                                                     | Default |
-| -------- | --------------------------------------------------------------- | ------- |
-| callback | A function, which will be called, when playback is paused.      |         |
+| Argument | Description                                                                         | Default |
+| -------- | ----------------------------------------------------------------------------------- | ------- |
+| callback | A function, receiving the current beat position and tempo, when playback is paused. |         |
 
 
 

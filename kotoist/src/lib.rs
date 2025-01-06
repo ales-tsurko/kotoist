@@ -99,14 +99,6 @@ impl Plugin for Kotoist {
             self.process_incoming_events(context, buffer.samples());
 
             let transport = orchestrator::Transport::from(context.transport());
-            let is_playing = context.transport().playing;
-
-            if is_playing {
-                self.params.send_interpreter_msg(InterpreterMessage::OnPlay);
-            } else {
-                self.params
-                    .send_interpreter_msg(InterpreterMessage::OnPause);
-            }
 
             // send generated events
             for frame_offset in 0..buffer.samples() {
@@ -115,6 +107,17 @@ impl Plugin for Kotoist {
                     .transport()
                     .pos_beats()
                     .expect("This plugin can't work without beat position");
+
+                let tempo = context.transport().tempo.unwrap_or(120.0);
+                let is_playing = context.transport().playing;
+
+                if is_playing {
+                    self.params
+                        .send_interpreter_msg(InterpreterMessage::OnPlay(beats_position, tempo));
+                } else {
+                    self.params
+                        .send_interpreter_msg(InterpreterMessage::OnPause(beats_position, tempo));
+                }
                 // calculate beats offset
                 let beats_per_second = context
                     .transport()

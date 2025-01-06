@@ -82,13 +82,13 @@ impl Interpreter {
     }
 
     /// Dispatch `on_pause` callback.
-    pub(crate) fn on_pause(&mut self) {
-        self.dispatch_callback(&[], |cbs| cbs.pause.clone())
+    pub(crate) fn on_pause(&mut self, beat_pos: f64, tempo: f64) {
+        self.dispatch_callback(&[beat_pos.into(), tempo.into()], |cbs| cbs.pause.clone())
     }
 
     /// Dispatch `on_play` callback.
-    pub(crate) fn on_play(&mut self) {
-        self.dispatch_callback(&[], |cbs| cbs.play.clone())
+    pub(crate) fn on_play(&mut self, beat_pos: f64, tempo: f64) {
+        self.dispatch_callback(&[beat_pos.into(), tempo.into()], |cbs| cbs.play.clone())
     }
 
     fn dispatch_callback<'a>(
