@@ -1,9 +1,8 @@
 import koto
-from test import assert, assert_eq, assert_near
 export inf = from number import infinity
 
 export as_iter = |value|
-  if koto.type(value) == "Iterator"
+  if type(value) == "Iterator"
     loop
       next = value.try_next()
       if next == null then break
@@ -13,23 +12,23 @@ export as_iter = |value|
       yield value
 
 export csv_pattern = |pattern, num, file_name|
-  f = io.create "$file_name.csv"
+  f = io.create "{file_name}.csv"
   f.write_line "x,y"
   for n in 0..num
     value = pattern.try_next()
-    f.write_line "$n,${value}"
+    f.write_line "{n},{value}"
 
 export rrand = |min, max|
-  return (random.number() * (max - min)) + min
+  (random.number() * (max - min)) + min
 
 number.rand = ||
-  return self * random.number()
+  self * random.number()
 
 number.rand2 = ||
-  return random.number() * self * 2 - self
+  random.number() * self * 2 - self
 
 export exprand = |lo, hi|
-  return lo * ((hi / lo).ln() * random.number()).exp()
+  lo * ((hi / lo).ln() * random.number()).exp()
 
 number.fold = |lo, hi|
   x = self - lo
@@ -54,7 +53,7 @@ number.fold = |lo, hi|
   if c >= range
     c = range2 - c
 
-  return c + lo
+  c + lo
 
 number.round = |quant|
   if quant == 0.0 then self else (self / quant + 0.5).floor() * quant
@@ -63,32 +62,32 @@ number.sign = ||
   if self >= 0 then 1 else -1
 
 number.wrap = |lo, hi|
-    range = 0
-    if self >= hi
-      range = hi - lo
-      self -= range
-      if self < hi
-        return self
-    else if self < lo
-      range = hi - lo
-      self += range
-      if self >= lo
-        return self
-    else
+  range = 0
+  if self >= hi
+    range = hi - lo
+    self -= range
+    if self < hi
       return self
+  else if self < lo
+    range = hi - lo
+    self += range
+    if self >= lo
+      return self
+  else
+    return self
 
-    if hi == lo
-      return lo
-    return self - range * ((self - lo) / range).floor()
+  if hi == lo
+    return lo
 
-list.size = ||
-  return koto.size(self)
+  self - range * ((self - lo) / range).floor()
 
-list.copy = || return koto.copy(self)
+list.size = || size self
+
+list.copy = || copy self
 
 list.scramble = ||
   result = []
-  li_cp = koto.copy self
+  li_cp = copy self
   loop
     if li_cp.is_empty() then return result
     index = (li_cp.size() * random.number()).floor()
@@ -104,139 +103,143 @@ list.windex = ||
 
 list.normalize_sum = ||
   divisor = self.iter().sum()
-  return self.iter().each(|x| x / divisor).to_list()
+  self.iter().each(|x| x / divisor).to_list()
 
 list.add = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.iter().each(|x| x + other).to_list()
-  else if koto.type(other) == "List"
-    return self.iter().zip(other.iter()).each(|(a, b)| a + b).to_list()
-  else
-    throw "Unsupported type for `list.add`"
+  match type other
+    "Number" then 
+      self.iter().each(|x| x + other).to_list()
+    "List" then
+      self.iter().zip(other.iter()).each(|(a, b)| a + b).to_list()
+    else
+      throw "Unsupported type for `list.add`"
 
 list.sub = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.iter().each(|x| x - other).to_list()
-  else if koto.type(other) == "List"
-    return self.iter().zip(other.iter()).each(|(a, b)| a - b).to_list()
-  else
-    throw "Unsupported type for `list.sub`"
+  match type other
+    "Number" then 
+      self.iter().each(|x| x - other).to_list()
+    "List" then
+      self.iter().zip(other.iter()).each(|(a, b)| a - b).to_list()
+    else
+      throw "Unsupported type for `list.sub`"
 
 list.mul = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.iter().each(|x| x * other).to_list()
-  else if koto.type(other) == "List"
-    return self.iter().zip(other.iter()).each(|(a, b)| a * b).to_list()
-  else
-    throw "Unsupported type for `list.mul`"
+  match type other
+    "Number" then 
+      self.iter().each(|x| x * other).to_list()
+    "List" then
+      self.iter().zip(other.iter()).each(|(a, b)| a * b).to_list()
+    else
+      throw "Unsupported type for `list.mul`"
 
 list.div = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.iter().each(|x| x / other).to_list()
-  else if koto.type(other) == "List"
-    return self.iter().zip(other.iter()).each(|(a, b)| a / b).to_list()
-  else
-    throw "Unsupported type for `list.div`"
+  match type other
+    "Number" then 
+      self.iter().each(|x| x / other).to_list()
+    "List" then
+      self.iter().zip(other.iter()).each(|(a, b)| a / b).to_list()
+    else
+      throw "Unsupported type for `list.div`"
 
 list.mod = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.iter().each(|x| x % other).to_list()
-  else if koto.type(other) == "List"
-    return self.iter().zip(other.iter()).each(|(a, b)| a % b).to_list()
-  else
-    throw "Unsupported type for `list.mod`"
+  match type other
+    "Number" then 
+      self.iter().each(|x| x % other).to_list()
+    "List" then
+      self.iter().zip(other.iter()).each(|(a, b)| a % b).to_list()
+    else
+      throw "Unsupported type for `list.mod`"
 
-iterator.copy = || return koto.copy(self)
+iterator.copy = || copy self
 
-iterator.try_next = ||
-  value = self.next()
-  if value == null then value else value.get()
+iterator.try_next = || self.next()?.get()
 
 iterator.add = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| 
-      if koto.type(x) == "List"
-        x.add(other)
-      else if koto.type(x) == "Int" or koto.type(other) == "Float"
-        x + other
-      else
-        throw "Unsupported type for `iterator.add`"
-      )
-  else if koto.type(other) == "Iterator"
-    return self.zip(other).each(|(a, b)| a + b)
-  else
-    throw "Unsupported type for `iterator.add`"
+  match type other
+    "Number" then 
+      self.each |x|
+        match type x
+          "List" then
+            x.add(other)
+          "Number" then
+            x + other
+          else
+            throw "Unsupported type for `iterator.add`"
+    "Iterator" then
+      self.zip(other).each(|(a, b)| a + b)
+    else
+      throw "Unsupported type for `iterator.add`"
 
 iterator.sub = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| 
-      if koto.type(x) == "List"
-        x.sub(other)
-      else if koto.type(x) == "Int" or koto.type(other) == "Float"
-        x - other
-      else
-        throw "Unsupported type for `iterator.sub`"
-      )
-  else if koto.type(other) == "Iterator"
-    return self.zip(other).each(|(a, b)| a - b)
-  else
-    throw "Unsupported type for `iterator.sub`"
+  match type other
+    "Number" then 
+      self.each |x|
+        match type x
+          "List" then 
+            x.sub(other)
+          "Number" then
+            x - other
+          else
+            throw "Unsupported type for `iterator.sub`"
+    "Iterator" then
+      self.zip(other).each(|(a, b)| a - b)
+    else
+      throw "Unsupported type for `iterator.sub`"
 
 iterator.mul = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| 
-      if koto.type(x) == "List"
-        x.mul(other)
-      else if koto.type(x) == "Int" or koto.type(other) == "Float"
-        x * other
-      else
-        throw "Unsupported type for `iterator.mul`"
-      )
-  else if koto.type(other) == "Iterator"
-    return self.zip(other).each(|(a, b)| a * b)
-  else
-    throw "Unsupported type for `iterator.mul`"
+  match type other
+    "Number" then 
+      self.each |x|
+        match type x
+          "List" then 
+            x.mul(other)
+          "Number" then
+            x * other
+          else
+            throw "Unsupported type for `iterator.mul`"
+    "Iterator" then
+      self.zip(other).each(|(a, b)| a * b)
+    else
+      throw "Unsupported type for `iterator.mul`"
 
 iterator.div = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| 
-      if koto.type(x) == "List"
-        x.div(other)
-      else if koto.type(x) == "Int" or koto.type(other) == "Float"
-        x / other
-      else
-        throw "Unsupported type for `iterator.div`"
-      )
-  else if koto.type(other) == "Iterator"
-    return self.zip(other).each(|(a, b)| a / b)
-  else
-    throw "Unsupported type for `iterator.div`"
+  match type other
+    "Number" then 
+      self.each |x|
+        match type x
+          "List" then 
+            x.div(other)
+          "Number" then
+            x / other
+          else
+            throw "Unsupported type for `iterator.div`"
+    "Iterator" then
+      self.zip(other).each(|(a, b)| a / b)
+    else
+      throw "Unsupported type for `iterator.div`"
 
 iterator.mod = |other|
-  if koto.type(other) == "Int" or koto.type(other) == "Float"
-    return self.each(|x| 
-      if koto.type(x) == "List"
-        x.mod(other)
-      else if koto.type(x) == "Int" or koto.type(other) == "Float"
-        x % other
-      else
-        throw "Unsupported type for `iterator.mod`"
-      )
-  else if koto.type(other) == "Iterator"
-    return self.zip(other).each(|(a, b)| a % b)
-  else
-    throw "Unsupported type for `iterator.mod`"
+  match type other
+    "Number" then 
+      self.each |x|
+        match type x
+          "List" then 
+            x.mod(other)
+          "Number" then
+            x % other
+          else
+            throw "Unsupported type for `iterator.mod`"
+    "Iterator" then
+      self.zip(other).each(|(a, b)| a % b)
+    else
+      throw "Unsupported type for `iterator.mod`"
 
 export pbeta = |lo, hi, prob1, prob2, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if prob1 == null then prob1 = 1
-  if prob2 == null then prob2 = 1
-  if length == null then length = inf
-  lo_iter = as_iter lo
-  hi_iter = as_iter hi
-  prob1_iter = as_iter prob1
-  prob2_iter = as_iter prob2
+  lo_iter = as_iter lo or 0
+  hi_iter = as_iter hi or 1
+  prob1_iter = as_iter prob1 or 1
+  prob2_iter = as_iter prob2 or 1
+  length = length or inf
   lo_val = null
   hi_val = null
 
@@ -270,13 +273,10 @@ export pbeta = |lo, hi, prob1, prob2, length|
     length -= 1
 
 export pbrown = |lo, hi, step, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if step == null then step = 0.125
-  if length == null then length = inf
-  lo_iter = as_iter lo
-  hi_iter = as_iter hi
-  step_iter = as_iter step
+  lo_iter = as_iter lo or 0
+  hi_iter = as_iter hi or 1
+  step_iter = as_iter step or 0.125
+  length = length or inf
 
   lo_val = lo_iter.try_next()
   hi_val = hi_iter.try_next()
@@ -305,13 +305,10 @@ export pbrown = |lo, hi, step, length|
     length -= 1
 
 export pgbrown = |lo, hi, step, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if step == null then step = 0.125
-  if length == null then length = inf
-  lo_iter = as_iter lo
-  hi_iter = as_iter hi
-  step_iter = as_iter step
+  lo_iter = as_iter lo or 0
+  hi_iter = as_iter hi or 1
+  step_iter = as_iter step or 0.125
+  length = length or null
 
   lo_val = lo_iter.try_next()
   hi_val = hi_iter.try_next()
@@ -340,13 +337,11 @@ export pgbrown = |lo, hi, step, length|
     length -= 1
 
 export pcauchy = |mean, spread, length|
-  if mean == null then mean = 0
-  if spread == null then spread = 1
-  if length == null then length = inf
-  mean_iter = as_iter mean
-  spread_iter = as_iter spread
+  mean_iter = as_iter mean or 0
+  spread_iter = as_iter spread or 1
   mean_val = null
   spread_val = null
+  length = length or inf
 
   while length > 0
     ran = 0.5
@@ -381,7 +376,7 @@ export pclump = |n, pattern|
       li = []
 
 export pclutch = |pattern, connected|
-  if connected == null then connected = true
+  connected = connected or true
   val = null
 
   loop
@@ -399,7 +394,7 @@ export pclutch = |pattern, connected|
       yield val
 
 export pconst = |sum, pattern, tollerance|
-  if tollerance == null then tollerance = 0.001
+  tollerance = tollerance or 0.001
   iter = as_iter pattern
   delta = null
   elapsed = 0.0
@@ -422,7 +417,7 @@ export pconst = |sum, pattern, tollerance|
       yield delta
 
 export pdup = |n, pattern|
-  if koto.type(n) == "Iterator"
+  if type(n) == "Iterator"
     loop
       times = n.try_next()
       if times == null then break
@@ -439,11 +434,8 @@ export pdup = |n, pattern|
       n -= 1
 
 export pexprand = |lo, hi, length|
-  if lo == null then lo = 0.0001
-  if hi == null then hi = 1
-  if length == null then length = inf
-  lo_iter = as_iter lo
-  hi_iter = as_iter hi
+  lo_iter = as_iter lo or 0.0001
+  hi_iter = as_iter hi or 1
 
   while length > 0
     hi_val = hi_iter.try_next()
@@ -456,11 +448,9 @@ export pexprand = |lo, hi, length|
     length -= 1
 
 export pgauss = |mean, dev, length|
-  if mean == null then mean = 0
-  if dev == null then dev = 1
-  if length == null then length = inf
-  mean_iter = as_iter mean
-  dev_iter = as_iter dev
+  mean_iter = as_iter mean or 0
+  dev_iter = as_iter dev or 1
+  length = length or inf
 
   while length > 0
     dev_val = dev_iter.try_next()
@@ -475,9 +465,9 @@ export pgauss = |mean, dev, length|
     length -= 1
 
 export pgeom = |start, grow, length|
-  if start == null then start = 0
-  if grow == null then grow = 1
-  if length == null then length = inf
+  start = start or 0
+  grow = grow or 1
+  length = length or inf
   grow_iter = as_iter grow
   outval = null
   counter = 0
@@ -493,11 +483,9 @@ export pgeom = |start, grow, length|
     yield outval
 
 export pwhite = |lo, hi, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if length == null then length = inf
-  lo_iter = as_iter lo
-  hi_iter = as_iter hi
+  lo_iter = as_iter lo or 0
+  hi_iter = as_iter hi or 1
+  length = length or inf
 
   while length > 0
     hi_val = hi_iter.try_next()
@@ -510,9 +498,9 @@ export pwhite = |lo, hi, length|
     yield rrand lo_val, hi_val
 
 export plprand = |lo, hi, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if length == null then length = inf
+  lo = lo or null
+  hi = hi or 1
+  length = length or inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -521,9 +509,9 @@ export plprand = |lo, hi, length|
     yield iter1.try_next().min iter2.try_next()
 
 export phprand = |lo, hi, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if length == null then length = inf
+  lo = lo or null
+  hi = hi or 1
+  length = length or inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -532,9 +520,9 @@ export phprand = |lo, hi, length|
     yield iter1.try_next().max iter2.try_next()
 
 export pmeanrand = |lo, hi, length|
-  if lo == null then lo = 0
-  if hi == null then hi = 1
-  if length == null then length = inf
+  lo = lo or null
+  hi = hi or 1
+  length = length or inf
   iter1 = pwhite lo, hi, length
   iter2 = pwhite lo, hi, length
   while length > 0
@@ -543,7 +531,7 @@ export pmeanrand = |lo, hi, length|
     yield (iter1.try_next() + iter2.try_next()) * 0.5
 
 export pindex = |list_pat, index_pat, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   index_iter = null
   index = null
   item = null
@@ -559,7 +547,7 @@ export pindex = |list_pat, index_pat, repeats|
       if index == null then break
       item_count += 1
       item = list[index%list.size()]
-      if koto.type(item) == "Iterator"
+      if type(item) == "Iterator"
         iter = item.copy()
         loop
           next = iter.try_next()
@@ -572,7 +560,7 @@ export pindex = |list_pat, index_pat, repeats|
 
 export pfsm = |list, repeats|
   if list.is_empty() then return
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   item = null
   index = 0
   max_state = ((list.size() - 1) / 2).floor() - 1
@@ -582,7 +570,7 @@ export pfsm = |list, repeats|
       index = (random.pick list[index]).clamp(0, max_state) * 2 + 2
       item = list[index - 1]
       if item == null then break
-      if koto.type(item) == "Iterator"
+      if type(item) == "Iterator"
         iter = item.copy()
         loop
           next = iter.try_next()
@@ -593,9 +581,8 @@ export pfsm = |list, repeats|
     repeats -= 1
 
 export place = |list, repeats, offset|
-  if repeats == null then repeats = 1
-  if offset == null then offset = 0
-  offset_iter = as_iter offset
+  repeats = repeats or 1
+  offset_iter = as_iter offset or 0
   # we don't use repeats here as it can be inf, which won't work for
   # indexing
   repeat_num = 0 
@@ -604,7 +591,7 @@ export place = |list, repeats, offset|
     if offset == null then break
     for i in 0..list.size()
       item = list[(i + offset)%list.size()]
-      if koto.type(item) == "List"
+      if type(item) == "List"
         item = item[repeat_num%item.size()]
       item = as_iter item
       yield item.try_next()
@@ -612,9 +599,8 @@ export place = |list, repeats, offset|
     repeats -= 1
 
 export ppoisson = |mean, length|
-  if mean == null then mean = 1
-  if length == null then length = inf
-  mean_iter = as_iter mean
+  length = length or inf
+  mean_iter = as_iter mean or 1
   while length > 0
     mean_val = mean_iter.try_next()
     if mean_val == null then break
@@ -628,11 +614,11 @@ export ppoisson = |mean, length|
     length -= 1
 
 export prand = |list, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   while repeats > 0
     item = random.pick list
     if item == null then break
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -643,30 +629,28 @@ export prand = |list, repeats|
     repeats -= 1
 
 export prorate = |proportion, pattern|
-  if pattern == null then pattern = 1
-  iter = as_iter pattern
+  iter = as_iter pattern or 1
   prop = as_iter proportion
   loop
     val = iter.try_next()
     c = prop.try_next()
     if val == null or c == null then break
-    if koto.type(c) == "List"
+    if type(c) == "List"
       for el in c
         yield el * val
     yield c * val
     yield (1 - c) * val
 
 export pseq = |list, repeats, offset|
-  if repeats == null then repeats = 1
-  if offset == null then offset = 0
-  offset = as_iter offset
+  repeats = repeats or 1
+  offset = as_iter offset or 0
   while repeats > 0
     offset_next = offset.try_next()
     if offset_next == null then break
     offset_next = offset_next
     for n in 0..list.size()
       event = list[(n + offset_next)%list.size()]
-      if koto.type(event) == "Iterator"
+      if type(event) == "Iterator"
         event = event.copy()
         loop
           next = event.try_next()
@@ -677,16 +661,15 @@ export pseq = |list, repeats, offset|
     repeats -= 1
 
 export pser = |list, repeats, offset|
-  if repeats == null then repeats = 1
-  if offset == null then offset = 0
-  offset = as_iter offset
+  repeats = repeats or 1
+  offset = as_iter offset or 0
   n = 0 # we use it, because repeats can be inf
   while repeats > 0
     offset_next = offset.try_next()
     if offset_next == null then break
     item = list[(offset_next + n)%list.size()]
     n += 1
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -698,14 +681,12 @@ export pser = |list, repeats, offset|
     repeats -= 1
 
 export pseries = |start, step, length|
-  if start == null then start = 0
-  if step == null then step = 1
-  if length == null then length = inf
-  cur = as_iter start
+  length = length or inf
+  cur = as_iter start or 0
   cur = cur.try_next()
   len = as_iter length
   len = len.try_next()
-  step_iter = as_iter step
+  step_iter = as_iter step or 1
   while len > 0
     step_val = step_iter.try_next()
     if step_val == null then break
@@ -715,11 +696,11 @@ export pseries = |start, step, length|
     yield outval
 
 export pshuf = |list, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   list = list.scramble()
   while repeats > 0
     for item in list
-      if koto.type(item) == "Iterator"
+      if type(item) == "Iterator"
         iter = item.copy()
         loop
           next = iter.try_next()
@@ -730,21 +711,18 @@ export pshuf = |list, repeats|
     repeats -= 1
 
 export pslide = |list, repeats, len, step, start, wrap_at_end|
-  if repeats == null then repeats = 1
-  if len == null then len = 3
-  if step == null then step = 1
-  if start == null then start = 0
-  if wrap_at_end == null then wrap_at_end = true
-  pos = start
-  step_iter = as_iter step
-  length_iter = as_iter len
+  repeats = repeats or 1
+  wrap_at_end = wrap_at_end or true
+  pos = start or 0
+  step_iter = as_iter step or 1
+  length_iter = as_iter len or 3
   while repeats > 0
     length_val = length_iter.try_next()
     if length_val == null then return
     if wrap_at_end
       for n in 0..length_val
         item = list[(pos + n)%list.size()]
-        if koto.type(item) == "Iterator"
+        if type(item) == "Iterator"
           next = item.try_next()
           if next == null then break
           yield next
@@ -754,7 +732,7 @@ export pslide = |list, repeats, len, step, start, wrap_at_end|
       for n in 0..length_val
         item = list.get(pos + n)
         if item == null then return
-        if koto.type(item) == "Iterator"
+        if type(item) == "Iterator"
           next = item.try_next()
           if next == null then break
           yield next
@@ -782,12 +760,11 @@ export psubdivide = |n, pattern|
     subdivision = subdivisions.try_next()
 
 export pswitch = |list, which|
-  if which == null then which = 0
-  index_iter = as_iter which
+  index_iter = as_iter which or 0
   index = index_iter.try_next()
   while index != null
     item = list[index.floor()%list.size()]
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -798,7 +775,7 @@ export pswitch = |list, which|
     index = index_iter.try_next()
 
 export ptuple = |list, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   while repeats > 0
     saw_nil = false
     streams = list.iter().each(|i| as_iter i).to_list()
@@ -814,18 +791,15 @@ export ptuple = |list, repeats|
     repeats -= 1
 
 export pwalk = |list, step_pattern, direction_pattern, start_pos|
-  if direction_pattern == null then direction_pattern = 1
-  if start_pos == null then start_pos = 0
-  index = as_iter(start_pos).try_next()
+  index = as_iter(start_pos or 0).try_next()
   step_iter = as_iter step_pattern
-  direction_iter = as_iter direction_pattern
-  direction = direction_iter.try_next()
-  if direction == null then direction = 1
+  direction_iter = as_iter direction_pattern or 1
+  direction = direction_iter.try_next() or 1
   step = step_iter.try_next()
   while step != null
     item = list[index]
     if item == null then break
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -835,20 +809,19 @@ export pwalk = |list, step_pattern, direction_pattern, start_pos|
       yield item
     step *= direction
     if (index + step) < 0 or (index + step) >= list.size()
-      direction = direction_pattern.try_next()
-      if direction == null then direction = 1
+      direction = direction_pattern.try_next() or 1
       step = step.abs() * direction.sign()
     index = (index + step) % list.size()
     step = step_iter.try_next()
 
 export pwrand = |list, weights, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   w_iter = as_iter weights
   while repeats > 0
     w_val = w_iter.try_next()
     if w_val == null then break
     item = list[w_val.windex()]
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -859,13 +832,13 @@ export pwrand = |list, weights, repeats|
     repeats -= 1
 
 export pxrand = |list, repeats|
-  if repeats == null then repeats = 1
+  repeats = repeats or 1
   index = list.size().rand().floor()
   while repeats > 0
     size = list.size()
     index = (index + (size - 1).rand().floor() + 1) % size
     item = list[index]
-    if koto.type(item) == "Iterator"
+    if type(item) == "Iterator"
       iter = item.copy()
       loop
         next = iter.try_next()
@@ -877,7 +850,7 @@ export pxrand = |list, repeats|
 
 pn = |pattern, repeats|
   while repeats > 0
-    if koto.type(pattern) == "Iterator"
+    if type(pattern) == "Iterator"
       iter = pattern.copy()
       loop
         next = iter.try_next()
@@ -888,8 +861,7 @@ pn = |pattern, repeats|
     repeats -= 1
 
 
-@tests =
-
+export
   @pre_test: ||
     random.seed 1
 

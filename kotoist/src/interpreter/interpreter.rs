@@ -20,7 +20,6 @@ impl Interpreter {
         let mut koto = Koto::with_settings(
             KotoSettings {
                 run_tests: cfg!(debug_assertions),
-                export_top_level_ids: true,
                 ..Default::default()
             }
             .with_stdin(StdIn)
@@ -36,8 +35,11 @@ impl Interpreter {
         koto.prelude().insert("random", make_random_module());
 
         koto.compile(
-            "from kotoist import midiout, on_load, on_midiin, \
-            on_midiincc, on_play, on_pause, print_scales",
+            CompileArgs::new(
+                "from kotoist import midiout, on_load, on_midiin, \
+                    on_midiincc, on_play, on_pause, print_scales",
+            )
+            .export_top_level_ids(true),
         )
         .expect("import statement should compile");
         koto.run()
@@ -58,7 +60,9 @@ impl Interpreter {
     }
 
     pub(crate) fn eval_code(&mut self, code: &str) {
-        let result = self.koto.compile_and_run(code);
+        let result = self
+            .koto
+            .compile_and_run(CompileArgs::new(code).export_top_level_ids(true));
         self.handle_koto_result(result);
     }
 
@@ -152,12 +156,12 @@ macro_rules! impl_channel {
         impl KotoRead for $name {}
 
         impl KotoWrite for $name {
-            fn write(&self, bytes: &[u8]) -> koto::Result<()> {
+            fn write(&self, bytes: &[u8]) -> koto::runtime::Result<()> {
                 let value = String::from_utf8_lossy(bytes);
                 self.send(value.to_string());
                 Ok(())
             }
-            fn write_line(&self, text: &str) -> koto::Result<()> {
+            fn write_line(&self, text: &str) -> koto::runtime::Result<()> {
                 self.send(text.to_owned());
                 Ok(())
             }
