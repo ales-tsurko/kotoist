@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::orchestrator::{Orchestrator, Pattern, Scale};
-use koto::prelude::*;
+use koto::{prelude::*, runtime::Result};
 
 use crate::pipe::{Message as PipeMessage, PipeIn};
 
@@ -43,31 +43,27 @@ pub(crate) struct Callbacks {
 }
 
 impl Callbacks {
-    fn set_load(&mut self, ctx: &mut CallContext) -> Result<KValue, koto::Error> {
+    fn set_load(&mut self, ctx: &mut CallContext) -> Result<KValue> {
         Self::set_callback(&mut self.load, ctx, "on_load")
     }
 
-    fn set_midiin(&mut self, ctx: &mut CallContext) -> Result<KValue, koto::Error> {
+    fn set_midiin(&mut self, ctx: &mut CallContext) -> Result<KValue> {
         Self::set_callback(&mut self.midiin, ctx, "on_midiin")
     }
 
-    fn set_midiincc(&mut self, ctx: &mut CallContext) -> Result<KValue, koto::Error> {
+    fn set_midiincc(&mut self, ctx: &mut CallContext) -> Result<KValue> {
         Self::set_callback(&mut self.midiincc, ctx, "on_midiincc")
     }
 
-    fn set_pause(&mut self, ctx: &mut CallContext) -> Result<KValue, koto::Error> {
+    fn set_pause(&mut self, ctx: &mut CallContext) -> Result<KValue> {
         Self::set_callback(&mut self.pause, ctx, "on_pause")
     }
 
-    fn set_play(&mut self, ctx: &mut CallContext) -> Result<KValue, koto::Error> {
+    fn set_play(&mut self, ctx: &mut CallContext) -> Result<KValue> {
         Self::set_callback(&mut self.play, ctx, "on_play")
     }
 
-    fn set_callback(
-        ptr: &mut Option<KValue>,
-        ctx: &mut CallContext,
-        name: &str,
-    ) -> Result<KValue, koto::Error> {
+    fn set_callback(ptr: &mut Option<KValue>, ctx: &mut CallContext, name: &str) -> Result<KValue> {
         use KValue::*;
         match ctx.args() {
             [value] => {
@@ -78,9 +74,8 @@ impl Callbacks {
         }
     }
 
-    fn check_callback(func_name: &str, value: KValue) -> Result<KValue, koto::Error> {
-        use KValue::*;
-        if !matches!(value, Function(_) | CaptureFunction(_) | NativeFunction(..)) {
+    fn check_callback(func_name: &str, value: KValue) -> Result<KValue> {
+        if !value.is_callable() {
             runtime_error!("kotoist.{}: expected a function", func_name)
         } else {
             Ok(value)
@@ -88,7 +83,7 @@ impl Callbacks {
     }
 }
 
-fn print_scales(ctx: &mut CallContext, pipe_in: PipeIn) -> Result<KValue, koto::Error> {
+fn print_scales(ctx: &mut CallContext, pipe_in: PipeIn) -> Result<KValue> {
     use KValue::Null;
 
     match ctx.args() {
@@ -100,10 +95,7 @@ fn print_scales(ctx: &mut CallContext, pipe_in: PipeIn) -> Result<KValue, koto::
     }
 }
 
-fn midiout(
-    ctx: &mut CallContext,
-    orchestrator: Arc<Mutex<Orchestrator>>,
-) -> Result<KValue, koto::Error> {
+fn midiout(ctx: &mut CallContext, orchestrator: Arc<Mutex<Orchestrator>>) -> Result<KValue> {
     use KValue::{List, Map, Null, Number};
     match ctx.args() {
         [Map(map), Number(quant)] => {
