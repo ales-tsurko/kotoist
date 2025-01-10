@@ -848,7 +848,7 @@ export pxrand = |list, repeats|
       yield item
     repeats -= 1
 
-pn = |pattern, repeats|
+export pn = |pattern, repeats|
   while repeats > 0
     if type(pattern) == "Iterator"
       iter = pattern.copy()
