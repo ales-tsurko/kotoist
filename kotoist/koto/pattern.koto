@@ -308,7 +308,7 @@ export pgbrown = |lo, hi, step, length|
   lo_iter = as_iter lo or 0
   hi_iter = as_iter hi or 1
   step_iter = as_iter step or 0.125
-  length = length or null
+  length = length or inf
 
   lo_val = lo_iter.try_next()
   hi_val = hi_iter.try_next()
@@ -436,6 +436,7 @@ export pdup = |n, pattern|
 export pexprand = |lo, hi, length|
   lo_iter = as_iter lo or 0.0001
   hi_iter = as_iter hi or 1
+  length = length or inf
 
   while length > 0
     hi_val = hi_iter.try_next()
