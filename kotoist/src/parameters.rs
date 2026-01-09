@@ -195,9 +195,3 @@ impl Snippet {
         }
     }
 }
-
-#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub(crate) struct PianoKey {
-    pub(crate) name: String,
-    pub(crate) is_black: bool,
-}

@@ -5,6 +5,7 @@ use nih_plug::editor::Editor;
 use nih_plug_egui::{
     create_egui_editor,
     egui::{self, containers::ScrollArea},
+    EguiSettings,
 };
 
 use self::piano_roll::PianoRoll;
@@ -30,8 +31,9 @@ pub(crate) fn create_editor(
     create_egui_editor(
         params.editor_state.clone(),
         GuiState::default(),
-        |_, _| {},
-        move |egui_ctx, _setter, state| {
+        EguiSettings::default(),
+        |_, _, _| {},
+        move |egui_ctx, _setter, _queue, state| {
             egui::TopBottomPanel::top("tabbar")
                 .show_separator_line(false)
                 .exact_height(42.0)
@@ -51,11 +53,11 @@ pub(crate) fn create_editor(
                 .show(egui_ctx, |ui| {
                     let rect = ui.available_rect_before_wrap();
 
-                    ui.allocate_ui_at_rect(rect, |ui| {
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
                         piano_roll.draw(ui);
                     });
 
-                    ui.allocate_ui_at_rect(rect, |ui| {
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
                         text_editor(egui_ctx, ui, state, &params);
                     });
                 });
@@ -161,7 +163,7 @@ fn text_editor(
             })
             .unwrap_or_default();
 
-        if ui.interact_bg(egui::Sense::click()).clicked() {
+        if ui.response().interact(egui::Sense::click()).clicked() {
             output.response.request_focus();
         }
 
